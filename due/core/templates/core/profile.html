@@ -1,0 +1,483 @@
+{% extends "core/base.html" %}
+{% load static %}
+{% load humanize %}
+
+{% block title %}
+    Trang cá nhân của {{ profile_user.get_full_name|default:profile_user.username }} - DUE Network
+{% endblock %}
+
+{% block extra_head %}
+<style>
+    /* Profile Page Specific Styles */
+    .profile-page-wrapper {
+        background-color: #f8f9fa;
+        padding-bottom: 2rem;
+    }
+
+    .profile-cover-photo {
+        background-color: #6c757d;
+        height: 280px;
+        background-size: cover;
+        background-position: center;
+        border-radius: 0 0 0.75rem 0.75rem;
+        margin-bottom: -70px; /* Điều chỉnh để avatar đè lên vừa phải */
+        position: relative;
+    }
+
+    .profile-header-card {
+        background-color: #fff;
+        border-radius: 0.75rem;
+        box-shadow: 0 4px 12px rgba(0,0,0,.08);
+        padding: 1.5rem;
+        padding-top: 75px; /* Khoảng trống cho avatar (bằng 1 nửa chiều cao avatar + chút padding) */
+        position: relative;
+        z-index: 10;
+    }
+
+    .profile-avatar-wrapper {
+        width: 130px; /* Giảm kích thước avatar */
+        height: 130px; /* Giảm kích thước avatar */
+        border-radius: 50%;
+        overflow: hidden;
+        border: 4px solid #ffffff;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+        margin: 0 auto;
+        position: absolute;
+        top: -65px; /* Một nửa chiều cao avatar (130/2 = 65) */
+        left: 50%;
+        transform: translateX(-50%);
+        background-color: #e9ecef;
+    }
+    .profile-avatar {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+    .profile-avatar-edit-btn {
+        width: 36px;
+        height: 36px;
+        line-height: 22px;
+        font-size: 0.9rem;
+        box-shadow: 0 1px 3px rgba(0,0,0,.2);
+    }
+
+    .profile-name {
+        font-size: 1.7rem;
+        font-weight: 700;
+        margin-top: 0.25rem; /* Giảm khoảng cách với avatar */
+        margin-bottom: 0.25rem; /* Khoảng cách với username */
+    }
+    .profile-username {
+        color: #6c757d;
+        font-size: 0.95rem;
+        margin-bottom: 0.75rem; /* Giảm khoảng cách với stats/bio */
+    }
+    .profile-bio {
+        font-size: 0.9rem;
+        color: #495057;
+        margin-bottom: 1rem;
+        max-width: 550px;
+        margin-left: auto;
+        margin-right: auto;
+    }
+
+    .profile-stats {
+        margin-bottom: 1rem; /* Giảm khoảng cách với actions */
+    }
+    .profile-stats > div {
+        padding: 0 0.5rem; /* Giảm padding ngang của mỗi item stat */
+        text-align: center;
+    }
+    .profile-stats a, .profile-stats .stat-item-no-link {
+        color: #495057;
+        text-decoration: none;
+        display: inline-block;
+        padding: 0.1rem 0.3rem; /* Giảm padding link */
+        border-radius: 0.25rem;
+        transition: background-color 0.2s ease;
+    }
+    .profile-stats a:hover {
+        background-color: #f1f3f5;
+        color: #0d6efd;
+    }
+    .profile-stats strong {
+        display: block;
+        font-size: 1rem;
+        font-weight: 600;
+        color: #212529;
+        margin-bottom: 0;
+    }
+    .profile-stats span.text-muted {
+        font-size: 0.7rem; /* Giữ kích thước text nhỏ */
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+
+    .profile-actions .btn {
+        font-size: 0.9rem;
+        padding: 0.5rem 1rem;
+        border-radius: 0.375rem;
+    }
+    .profile-actions .btn-info {
+        background-color: #0dcaf0;
+        border-color: #0dcaf0;
+    }
+    .profile-actions .btn-info:hover {
+        background-color: #0baccc;
+        border-color: #0baccc;
+    }
+
+    .profile-content-wrapper {
+        display: flex;
+        gap: 1.5rem;
+        margin-top: 1.5rem;
+    }
+    .profile-sidebar {
+        width: 320px;
+        flex-shrink: 0;
+    }
+    .profile-posts-main {
+        flex-grow: 1;
+    }
+
+    .info-card {
+        background-color: #fff;
+        padding: 1.5rem;
+        border-radius: 0.5rem;
+        box-shadow: 0 2px 6px rgba(0,0,0,.06);
+        margin-bottom: 1.5rem;
+    }
+    .info-card h5 {
+        font-size: 1.1rem;
+        font-weight: 600;
+        margin-bottom: 1rem;
+        padding-bottom: 0.75rem;
+        border-bottom: 1px solid #f1f3f5;
+    }
+    .info-card ul.list-info li {
+        margin-bottom: 0.6rem;
+        display: flex;
+        align-items: flex-start;
+    }
+    .info-card ul.list-info li i.fa-fw {
+        width: 20px;
+        text-align: center;
+        color: #6c757d;
+        margin-top: 0.15rem;
+        margin-right: 0.75rem;
+        flex-shrink: 0;
+    }
+    .info-card .recent-event-item {
+        display: block;
+        color: #212529;
+        text-decoration: none;
+        padding: 0.65rem 0;
+        border-bottom: 1px dashed #e9ecef;
+        transition: background-color 0.2s ease;
+    }
+    .info-card .recent-event-item:last-child {
+        border-bottom: none;
+        padding-bottom: 0;
+    }
+    .info-card .recent-event-item:hover {
+        background-color: #f8f9fa;
+    }
+    .info-card .recent-event-item strong {
+        font-weight: 500;
+        display: block;
+        margin-bottom: 0.15rem;
+    }
+     .info-card .recent-event-item .badge {
+        font-size: 0.7em;
+        padding: 0.3em 0.5em;
+        font-weight: 500;
+    }
+    .info-card .recent-event-item .event-creator-info {
+        font-size: 0.8rem;
+    }
+
+    .create-post-on-profile .form-control {
+        background-color: #fff;
+        border-color: #ced4da;
+        border-radius: 20px;
+        padding-left: 1.25rem;
+        transition: background-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+    }
+    .create-post-on-profile .form-control:hover,
+    .create-post-on-profile .form-control:focus {
+        background-color: #fff;
+        box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.15);
+    }
+    .create-post-on-profile .card{
+         box-shadow: 0 2px 6px rgba(0,0,0,.06);
+         margin-bottom: 1.5rem;
+    }
+
+    .shared-post-frame-wrapper {
+        margin-bottom: 1.5rem;
+    }
+    .shared-post-info {
+        padding: 0.5rem 1rem 0.25rem 1rem;
+        border: 1px solid #e9ecef;
+        border-bottom: none;
+        background-color: #f8f9fa;
+        border-top-left-radius: 0.375rem;
+        border-top-right-radius: 0.375rem;
+    }
+
+    @media (max-width: 991.98px) {
+        .profile-sidebar {
+            width: 280px;
+        }
+    }
+
+    @media (max-width: 767.98px) {
+        .profile-cover-photo {
+            height: 200px;
+            margin-bottom: -55px; /* Điều chỉnh theo avatar mới (120px/2 - chút xíu) */
+        }
+        .profile-header-card {
+            padding-top: 70px; /* Khoảng 120px/2 + padding */
+            margin-left: 0.5rem;
+            margin-right: 0.5rem;
+        }
+        .profile-avatar-wrapper {
+            width: 120px;
+            height: 120px;
+            top: -60px;
+        }
+        .profile-name {
+            font-size: 1.4rem;
+            margin-bottom: 0.15rem;
+        }
+        .profile-username {
+            font-size: 0.9rem;
+            margin-bottom: 0.5rem;
+        }
+        .profile-bio {
+            font-size: 0.85rem;
+            margin-bottom: 0.75rem;
+        }
+        .profile-stats {
+            gap: 0.25rem;
+            margin-bottom: 0.75rem;
+        }
+        .profile-stats > div {
+            padding: 0 0.15rem;
+        }
+        .profile-stats strong {
+            font-size: 0.9rem;
+        }
+        .profile-stats span.text-muted {
+            font-size: 0.65rem;
+        }
+
+        .profile-content-wrapper {
+            flex-direction: column;
+            margin-top: 1rem;
+            gap: 1rem;
+        }
+        .profile-sidebar {
+            width: 100%;
+            order: 1;
+        }
+        .profile-posts-main {
+            order: 2;
+        }
+    }
+</style>
+{% endblock %}
+
+
+{% block content %}
+<div class="profile-page-wrapper">
+    <div class="container-fluid px-lg-3 px-md-2 px-1">
+        <div class="profile-cover-photo" style="{% if profile_user.profile.cover_photo and profile_user.profile.cover_photo.name %}background-image: url('{{ profile_user.profile.cover_photo.url }}');{% else %}background-image: url('{% static 'core/images/default_cover.jpg' %}');{% endif %}">
+            {% if is_own_profile %}
+            {# <a href="#" class="btn btn-sm btn-light position-absolute bottom-0 end-0 m-2" title="Thay đổi ảnh bìa"><i class="fas fa-camera"></i></a> #}
+            {% endif %}
+        </div>
+
+        <div class="profile-header-card text-center">
+            <div class="profile-avatar-wrapper">
+                {% if profile_user.profile and profile_user.profile.avatar and profile_user.profile.avatar.name %}
+                    <img src="{{ profile_user.profile.avatar.url }}" alt="Ảnh đại diện của {{ profile_user.username }}" class="profile-avatar">
+                {% else %}
+                    <img src="{% static 'core/images/default_placeholder_avatar.png' %}" alt="Ảnh đại diện mặc định" class="profile-avatar">
+                {% endif %}
+
+                {% if is_own_profile %}
+                <a href="{% url 'settings_user_info' %}" class="btn btn-sm btn-light position-absolute bottom-0 end-0 m-1 rounded-circle profile-avatar-edit-btn" title="Thay đổi ảnh đại diện">
+                    <i class="fas fa-camera"></i>
+                </a>
+                {% endif %}
+            </div>
+            <h1 class="profile-name">{{ profile_user.get_full_name|default:profile_user.username }}</h1>
+            <p class="profile-username">@{{ profile_user.username }}</p>
+
+            {% if profile_user.profile.bio %}
+                <p class="profile-bio">{{ profile_user.profile.bio|linebreaksbr }}</p>
+            {% endif %}
+
+            <div class="d-flex justify-content-center flex-wrap gap-2 profile-stats"> {# Đã giảm gap ở đây #}
+                <div>
+                    <a href="{% url 'user_followers' profile_user.username %}">
+                        <strong id="profile-followers-count-{{ profile_user.id }}">{{ followers_count|intcomma }}</strong>
+                        <span class="text-muted">Người theo dõi</span>
+                    </a>
+                </div>
+                <div>
+                    <a href="{% url 'user_following' profile_user.username %}">
+                        <strong>{{ following_count|intcomma }}</strong>
+                        <span class="text-muted">Đang theo dõi</span>
+                    </a>
+                </div>
+                <div>
+                    <span class="stat-item-no-link">
+                        <strong>{{ posts.count|intcomma }}</strong>
+                        <span class="text-muted">Bài viết</span>
+                    </span>
+                </div>
+            </div>
+
+            <div class="profile-actions">
+                {% if user.is_authenticated %}
+                    {% if is_own_profile %}
+                        <a href="{% url 'settings_user_info' %}" class="btn btn-primary">
+                            <i class="fas fa-edit me-1"></i> Chỉnh sửa trang cá nhân
+                        </a>
+                    {% else %}
+                        <button class="btn {% if is_following %}btn-outline-secondary{% else %}btn-info text-white{% endif %} toggle-follow-btn" data-user-id="{{ profile_user.id }}">
+                            <i class="fas {% if is_following %}fa-user-minus{% else %}fa-user-plus{% endif %} me-1"></i>
+                            <span class="follow-text">{% if is_following %}Bỏ theo dõi{% else %}Theo dõi{% endif %}</span>
+                        </button>
+                        <a href="{% url 'start_private_chat' profile_user.id %}" class="btn btn-outline-primary ms-2">
+                            <i class="fas fa-comments me-1"></i> Nhắn tin
+                        </a>
+                    {% endif %}
+                {% endif %}
+            </div>
+        </div>
+
+
+        <div class="profile-content-wrapper mt-3">
+            <aside class="profile-sidebar">
+                <div class="info-card">
+                    <h5><i class="fas fa-info-circle me-2 text-primary"></i>Giới thiệu</h5>
+                    <ul class="list-unstyled text-muted small list-info">
+                        {% if profile_user.email %}
+                        <li><i class="fas fa-envelope fa-fw"></i> <span>{{ profile_user.email }}</span></li>
+                        {% endif %}
+                        {% if profile_user.profile.phone_number %}
+                        <li><i class="fas fa-phone fa-fw"></i> <span>{{ profile_user.profile.phone_number|default:"Chưa cập nhật" }}</span></li>
+                        {% endif %}
+                        <li><i class="fas fa-calendar-alt fa-fw"></i> <span>Tham gia từ {{ profile_user.date_joined|date:"d/m/Y" }}</span></li>
+                        {% if profile_user.profile.location %}
+                        <li><i class="fas fa-map-marker-alt fa-fw"></i> <span>{{ profile_user.profile.location }}</span></li>
+                        {% endif %}
+                         {% if profile_user.profile.birth_date %}
+                        <li><i class="fas fa-birthday-cake fa-fw"></i> <span>{{ profile_user.profile.birth_date|date:"d/m/Y" }}</span></li>
+                        {% endif %}
+                    </ul>
+                </div>
+
+                <div class="info-card">
+                    <h5><i class="fas fa-calendar-check me-2 text-success"></i>Sự kiện đã quan tâm</h5>
+                    {% if recent_liked_events %}
+                        <div class="list-group list-group-flush">
+                            {% for event_item in recent_liked_events %}
+                            <a href="#" class="list-group-item list-group-item-action recent-event-item p-2">
+                                <div class="d-flex w-100 justify-content-between align-items-center mb-1">
+                                    <strong class="text-truncate" style="max-width: 70%;">{{ event_item.title }}</strong>
+                                    {% if event_item.tags.first %}
+                                        <small><span class="badge bg-primary rounded-pill">{{ event_item.tags.first.name }}</span></small>
+                                    {% endif %}
+                                </div>
+                                <small class="text-muted event-creator-info">
+                                    Tạo bởi: @{{ event_item.creator.username }}
+                                    <span class="float-end">{{ event_item.created_at|date:"d/m" }}</span>
+                                </small>
+                            </a>
+                            {% endfor %}
+                        </div>
+                        {% if is_own_profile %}
+                            <a href="{% url 'my_events' %}" class="btn btn-sm btn-outline-primary mt-3 d-block">Xem tất cả sự kiện của tôi</a>
+                        {% elif recent_liked_events|length >= 3 %}
+                        {% endif %}
+                    {% else %}
+                        <p class="text-muted small m-0">
+                            {% if is_own_profile %}
+                                Bạn chưa quan tâm đến sự kiện nào. Hãy <a href="{% url 'event_list' %}">khám phá sự kiện</a>!
+                            {% else %}
+                                {{ profile_user.get_full_name|default:profile_user.username }} chưa quan tâm sự kiện nào.
+                            {% endif %}
+                        </p>
+                    {% endif %}
+                </div>
+            </aside>
+
+            <main class="profile-posts-main">
+                {% if is_own_profile %}
+                <div class="card create-post-on-profile">
+                    <div class="card-body">
+                         <div class="d-flex align-items-center">
+                            {% if request.user.profile and request.user.profile.avatar and request.user.profile.avatar.name %}
+                            <img src="{{ request.user.profile.avatar.url }}" alt="{{ request.user.username }}" class="rounded-circle me-3" width="45" height="45" style="object-fit:cover;">
+                            {% else %}
+                            <img src="{% static 'core/images/default_placeholder_avatar.png' %}" alt="{{ request.user.username }}" class="rounded-circle me-3" width="45" height="45" style="object-fit:cover;">
+                            {% endif %}
+                            <button type="button" class="form-control text-start text-muted" data-bs-toggle="modal" data-bs-target="#createPostModal">
+                                Bạn đang nghĩ gì, {{ request.user.first_name|default:request.user.username }}?
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                {% if post_form %}
+                     {% include "core/partials/_create_post_modal.html" with post_form=post_form %}
+                {% endif %}
+                {% endif %}
+
+
+                <h4 class="mb-3 {% if is_own_profile %}mt-4{% endif %}">Bài viết</h4>
+                <div id="profile-post-list">
+                    {% for post_item in posts %}
+                        {% if post_item.shared_from %}
+                            <div class="shared-post-frame-wrapper">
+                                <div class="shared-post-info">
+                                    <small class="text-muted d-block">
+                                        <i class="fas fa-retweet me-1 text-secondary"></i>
+                                        <a href="{% url 'profile' post_item.author.username %}" class="text-decoration-none fw-medium">{{ post_item.author.get_full_name|default:post_item.author.username }}</a> đã chia sẻ
+                                        <span class="float-end">{{ post_item.created_at|naturaltime }}</span>
+                                    </small>
+                                </div>
+                                {% include "core/partials/_post_card.html" with post=post_item.shared_from original_sharer_post=post_item is_shared_on_profile=True remove_outer_margin=True %}
+                            </div>
+                        {% else %}
+                            <div class="mb-3">
+                                {% include "core/partials/_post_card.html" with post=post_item %}
+                            </div>
+                        {% endif %}
+                    {% empty %}
+                        <div class="text-center py-5 info-card">
+                            <i class="far fa-file-alt fa-4x text-black-50 mb-3"></i>
+                            <p class="text-muted fs-5">{{ profile_user.get_full_name|default:profile_user.username }} chưa có bài viết nào.</p>
+                        </div>
+                    {% endfor %}
+                </div>
+            </main>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+    {{ block.super }}
+    <script src="{% static 'core/js/post_interactions.js' %}"></script>
+    <script src="{% static 'core/js/follow_handler.js' %}"></script>
+    <script>
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl)
+    })
+    </script>
+{% endblock %}

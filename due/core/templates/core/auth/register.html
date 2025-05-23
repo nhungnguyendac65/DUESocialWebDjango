@@ -1,0 +1,219 @@
+{% extends "core/base.html" %}
+{% load static %}
+{% load crispy_forms_tags %}
+
+{% block title %}Đăng ký tài khoản - DUE Network{% endblock %}
+
+{% block content %} {# Hoặc block chính trong base.html của bạn #}
+<style>
+    /* CSS cho trang register có thể đặt trực tiếp ở đây hoặc trong file static chính */
+    /* Để tránh xung đột, ta sẽ bọc nội dung register trong một class riêng */
+    .register-page-wrapper {
+        background-color: #eef2f7; /* Màu nền nhẹ cho toàn bộ khu vực register */
+        padding: 2rem 0;
+        min-height: calc(100vh - 56px); /* Giả sử navbar cao 56px, điều chỉnh nếu cần */
+        display: flex; /* Để auth-container có thể căn giữa */
+        align-items: center; /* Căn giữa theo chiều dọc */
+    }
+
+    .auth-container { /* Container chung cho form và text nền (nếu có) */
+        display: flex;
+        width: 100%;
+        max-width: 960px; /* Giới hạn chiều rộng tối đa của cả container */
+        margin: auto; /* Căn giữa container */
+        background-color: #fff; /* Nền trắng cho container bên trong */
+        border-radius: 0.75rem;
+        box-shadow: 0 8px 30px rgba(0,0,0,0.08);
+        overflow: hidden; /* Để bo góc hoạt động với các thành phần con */
+    }
+
+    .auth-card { /* Phần chứa form */
+        width: 100%;
+        max-width: 520px;
+        padding: 30px 40px;
+        background-color: #ffffff; /* Có thể không cần nếu auth-container đã là trắng */
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+    }
+
+    .auth-background-text { /* Phần text nền bên phải */
+        flex-grow: 1;
+        background-color: #f0f4f8;
+        color: #333;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        padding: 40px;
+        text-align: center;
+        border-top-right-radius: 0.75rem; /* Bo góc cho khớp với container */
+        border-bottom-right-radius: 0.75rem;
+    }
+    .auth-background-text h1 {
+        font-size: 3.5rem;
+        font-weight: bold;
+        color: #0056b3;
+        text-transform: uppercase;
+        letter-spacing: 2px;
+        margin-bottom: 1rem;
+    }
+    .auth-background-text p {
+        font-size: 1.1rem;
+        color: #555;
+        line-height: 1.6;
+    }
+
+    /* Input fields styling */
+    .register-page-wrapper .form-control { /* Thêm class bọc để CSS chỉ áp dụng ở đây */
+        padding: 0.75rem 1rem;
+        border-radius: 0.5rem;
+        border: 1px solid #ced4da;
+    }
+    .register-page-wrapper .form-control:focus {
+        border-color: #86b7fe;
+        box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+    }
+    .register-page-wrapper .btn {
+        padding: 0.75rem 1rem;
+        border-radius: 0.5rem;
+        font-weight: 500;
+    }
+    .register-page-wrapper .input-group .form-control {
+        border-top-right-radius: 0;
+        border-bottom-right-radius: 0;
+    }
+    .register-page-wrapper .input-group .btn {
+        border-top-left-radius: 0;
+        border-bottom-left-radius: 0;
+    }
+
+    @media (max-width: 991.98px) { /* Dưới lg breakpoint */
+        .auth-background-text {
+            display: none; /* Ẩn phần text nền trên màn hình nhỏ hơn */
+        }
+        .auth-card {
+            max-width: 520px; /* Cho phép form chiếm nhiều hơn trên tablet */
+            margin: 1rem auto; /* Căn giữa form trên màn hình nhỏ */
+        }
+        .auth-container {
+            flex-direction: column; /* Xếp chồng trên mobile/tablet */
+            background-color: transparent; /* Không cần nền cho container nữa */
+            box-shadow: none;
+        }
+        .register-page-wrapper {
+            padding: 1rem 0.5rem; /* Giảm padding trên mobile */
+        }
+    }
+</style>
+
+<div class="register-page-wrapper">
+    <div class="auth-container">
+        <div class="auth-card">
+            <div class="text-center mb-4">
+                <img src="{% static 'core/images/due_network_logo_main.png' %}" alt="DUE Network Logo" style="max-width: 180px;">
+                <h2 class="mt-3">Đăng ký tài khoản</h2>
+                <p class="text-muted">Tham gia cộng đồng DUE Network ngay hôm nay!</p>
+            </div>
+
+            {% if messages %}
+                {% for message in messages %}
+                    <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+
+            <form method="POST" action="{% url 'register' %}" id="registerForm">
+                {% csrf_token %}
+                {{ form|crispy }}
+
+                <button type="submit" class="btn btn-primary w-100 mb-3 mt-2">Đăng ký</button>
+
+                <div class="text-center">
+                    <p class="text-muted mb-0">Đã có tài khoản?</p>
+                    <a href="{% url 'login' %}" class="btn btn-outline-primary w-100">Đăng nhập</a>
+                </div>
+            </form>
+        </div>
+        <div class="auth-background-text">
+            <h1>due network</h1>
+            <p>Hãy tham gia vào cộng đồng chúng tôi!</p>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+    {{ block.super }} {# Gọi script từ base.html nếu có #}
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        document.querySelectorAll('.toggle-password-btn').forEach(button => {
+            button.addEventListener('click', function () {
+                const targetInputId = this.dataset.target || this.previousElementSibling.id; // Lấy ID của input liền trước hoặc từ data-target
+                const passwordInput = document.getElementById(targetInputId);
+                if (passwordInput) {
+                    const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+                    passwordInput.setAttribute('type', type);
+                    const icon = this.querySelector('i');
+                    icon.classList.toggle('fa-eye');
+                    icon.classList.toggle('fa-eye-slash');
+                }
+            });
+        });
+
+        // Thêm placeholders nếu form không tự có (crispy thường thêm từ label/help_text)
+        // Đoạn script thêm placeholder này có thể không cần thiết nếu crispy-forms đã xử lý tốt
+        // Hoặc bạn có thể set placeholder trực tiếp trong widget của Django Form
+        const emailInput = document.getElementById('{{ form.email.id_for_label }}');
+        if(emailInput && !emailInput.placeholder) emailInput.placeholder = 'ví dụ: 22112151444@due.udn.vn';
+
+        const phoneInput = document.getElementById('{{ form.phone_number.id_for_label }}');
+        if(phoneInput && !phoneInput.placeholder) phoneInput.placeholder = 'Số điện thoại (không bắt buộc)';
+
+        const usernameInput = document.getElementById('{{ form.username.id_for_label }}');
+        if(usernameInput && !usernameInput.placeholder) usernameInput.placeholder = 'Tên đăng nhập (dưới 20 ký tự)';
+
+        const password1Input = document.getElementById('{{ form.password1.id_for_label }}');
+        if(password1Input && !password1Input.placeholder) password1Input.placeholder = 'Mật khẩu (ít nhất 8 ký tự)';
+
+        const password2Input = document.getElementById('{{ form.password2.id_for_label }}');
+        if(password2Input && !password2Input.placeholder) password2Input.placeholder = 'Xác nhận lại mật khẩu';
+
+        // Xử lý để nút toggle password hoạt động với crispy-forms (nếu crispy render input trong div riêng)
+        // Nếu crispy forms không bọc input password và button trong .input-group sẵn,
+        // bạn cần điều chỉnh DOM hoặc dùng cách khác để đặt button bên cạnh input.
+        // Cách dưới đây giả định button được chèn vào ngay sau input.
+        document.querySelectorAll('input[type="password"]').forEach(passwordInput => {
+            const inputId = passwordInput.id;
+            // Kiểm tra xem đã có nút toggle chưa (tránh thêm nhiều lần)
+            if (passwordInput.nextElementSibling && passwordInput.nextElementSibling.classList.contains('toggle-password-btn')) {
+                return;
+            }
+
+            const toggleButton = document.createElement('button');
+            toggleButton.classList.add('btn', 'btn-outline-secondary', 'toggle-password-btn');
+            toggleButton.type = 'button';
+            toggleButton.dataset.target = inputId; // Gán target cho nút mới
+            toggleButton.innerHTML = '<i class="far fa-eye"></i>';
+            toggleButton.style.borderTopLeftRadius = '0';
+            toggleButton.style.borderBottomLeftRadius = '0';
+            toggleButton.style.height = passwordInput.offsetHeight + 'px'; // Căn chiều cao
+
+            const parent = passwordInput.parentNode;
+            if (parent.classList.contains('input-group')) { // Nếu đã là input-group
+                 parent.appendChild(toggleButton);
+            } else { // Nếu không, tạo input-group mới
+                const inputGroup = document.createElement('div');
+                inputGroup.classList.add('input-group');
+                parent.replaceChild(inputGroup, passwordInput); // Thay thế input bằng group
+                inputGroup.appendChild(passwordInput); // Đưa input vào group
+                inputGroup.appendChild(toggleButton); // Thêm button vào group
+                passwordInput.style.borderTopRightRadius = '0';
+                passwordInput.style.borderBottomRightRadius = '0';
+            }
+        });
+    });
+    </script>
+{% endblock %}

@@ -1,0 +1,126 @@
+{% extends "core/base.html" %}
+{% load static %}
+{% load crispy_forms_tags %} {# Nếu bạn dùng crispy_forms #}
+
+{% block title %}Chỉnh sửa bài viết: {{ post.title|truncatewords:5 }} - DUE Network{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h4 class="mb-0">Chỉnh sửa bài viết</h4>
+                </div>
+                <div class="card-body">
+                    <form method="POST" action="{% url 'edit_post' post.id %}" enctype="multipart/form-data">
+                        {% csrf_token %}
+
+                        {# Nếu không dùng crispy_forms, bạn sẽ render từng field thủ công như sau: #}
+                        {#
+                        <div class="mb-3">
+                            <label for="{{ form.title.id_for_label }}" class="form-label">{{ form.title.label }}</label>
+                            {{ form.title }}
+                            {% if form.title.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {% for error in form.title.errors %}{{ error }}{% endfor %}
+                                </div>
+                            {% endif %}
+                            {% if form.title.help_text %}
+                                <small class="form-text text-muted">{{ form.title.help_text }}</small>
+                            {% endif %}
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="{{ form.content.id_for_label }}" class="form-label">{{ form.content.label }}</label>
+                            {{ form.content }}
+                            {% if form.content.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {% for error in form.content.errors %}{{ error }}{% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="{{ form.image.id_for_label }}" class="form-label">{{ form.image.label }}</label>
+                            {% if post.image %}
+                                <p class="mb-1">
+                                    <small>Ảnh hiện tại:
+                                        <a href="{{ post.image.url }}" target="_blank">
+                                            {{ post.image.name|cut:"post_images/" }}
+                                        </a>
+                                    </small>
+                                </p>
+                            {% endif %}
+                            {{ form.image }}
+                            {% if form.image.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {% for error in form.image.errors %}{{ error }}{% endfor %}
+                                </div>
+                            {% endif %}
+                            <small class="form-text text-muted">Để trống nếu không muốn thay đổi ảnh.</small>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="{{ form.file_attachment.id_for_label }}" class="form-label">{{ form.file_attachment.label }}</label>
+                            {% if post.file_attachment %}
+                                <p class="mb-1">
+                                    <small>File hiện tại:
+                                        <a href="{{ post.file_attachment.url }}" target="_blank">
+                                            {{ post.file_attachment.name|cut:"post_files/" }}
+                                        </a>
+                                    </small>
+                                </p>
+                            {% endif %}
+                            {{ form.file_attachment }}
+                            {% if form.file_attachment.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {% for error in form.file_attachment.errors %}{{ error }}{% endfor %}
+                                </div>
+                            {% endif %}
+                            <small class="form-text text-muted">Để trống nếu không muốn thay đổi file đính kèm. File dưới 100MB.</small>
+                        </div>
+                        #}
+
+                        {# Nếu dùng crispy_forms, chỉ cần: #}
+                        {{ form|crispy }}
+
+                        <hr>
+                        <div class="d-flex justify-content-end">
+                            <a href="{% if post.get_absolute_url %}{{ post.get_absolute_url }}{% else %}{% url 'post_detail' post.id %}{% endif %}" class="btn btn-outline-secondary me-2">Hủy</a>
+                            <button type="submit" class="btn btn-primary">Lưu thay đổi</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+{# Thêm JavaScript nếu cần, ví dụ: preview ảnh trước khi upload #}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Ví dụ: Preview ảnh khi chọn file mới
+    const imageInput = document.getElementById('{{ form.image.id_for_label }}'); // Thay thế bằng ID thực tế nếu crispy đổi tên
+    if (imageInput) {
+        imageInput.addEventListener('change', function(event) {
+            const [file] = event.target.files;
+            if (file) {
+                let existingPreview = document.getElementById('imagePreview');
+                if (!existingPreview) {
+                    existingPreview = document.createElement('img');
+                    existingPreview.id = 'imagePreview';
+                    existingPreview.classList.add('img-fluid', 'rounded', 'my-2');
+                    existingPreview.style.maxHeight = '200px';
+                    // Chèn preview vào vị trí phù hợp, ví dụ sau input field
+                    event.target.insertAdjacentElement('afterend', existingPreview);
+                }
+                existingPreview.src = URL.createObjectURL(file);
+            }
+        });
+    }
+});
+</script>
+{% endblock %}

@@ -1,0 +1,163 @@
+{% extends "core/base.html" %} {# Kế thừa từ base.html #}
+{% load static %}
+{% load humanize %}
+
+{% block title %}Quản lý Người dùng - Admin{% endblock %}
+
+{% block extra_head %} {# Thêm CSS riêng cho trang này nếu cần #}
+<style>
+    .manage-users-wrapper {
+        background-color: #f8f9fa;
+        padding: 1.5rem;
+        min-height: calc(100vh - 56px);
+    }
+    .table-avatar { width: 35px; height: 35px; object-fit: cover; border-radius: 50%; margin-right: 0.75rem; }
+    .action-icon { font-size: 1.1rem; text-decoration: none; }
+    .action-icon.text-danger:hover { color: #a71d2a !important; }
+    .form-delete-user-inline input[type="text"] { max-width: 250px; }
+</style>
+{% endblock %}
+
+{% block content %} {# Sử dụng block content #}
+<div class="manage-users-wrapper">
+    <div class="container-fluid">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2 class="mb-0"><i class="fas fa-users-cog me-2"></i>Quản lý Người dùng</h2>
+            <a href="{% url 'admin_add_user' %}" class="btn btn-success">
+                <i class="fas fa-user-plus me-1"></i> Thêm người dùng mới
+            </a>
+        </div>
+
+        {% if messages %}
+            {% for message in messages %}
+                <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            {% endfor %}
+        {% endif %}
+
+        <div class="card shadow-sm mb-4">
+            <div class="card-header bg-light">
+                <h5 class="mb-0"><i class="fas fa-user-minus me-2"></i>Xóa người dùng theo Username</h5>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{% url 'manage_users' %}" class="row gx-2 gy-2 align-items-end form-delete-user-inline" id="deleteUserForm">
+                    {% csrf_token %}
+                    <div class="col-sm-6 col-md-4">
+                        <label for="delete_user_username_input" class="form-label">Tên đăng nhập cần xóa:</label>
+                        <input type="text" class="form-control form-control-sm" id="delete_user_username_input" name="delete_user_username" placeholder="Nhập username..." required>
+                    </div>
+                    <div class="col-auto">
+                        <button type="button" class="btn btn-danger btn-sm" onclick="confirmDelete()">
+                            <i class="fas fa-trash-alt me-1"></i> Xác nhận xóa
+                        </button>
+                    </div>
+                </form>
+                 <small class="form-text text-muted mt-1 d-block">Nhập tên đăng nhập của người dùng bạn muốn xóa và nhấn "Xác nhận xóa".</small>
+            </div>
+        </div>
+
+        <div class="card shadow-sm">
+            <div class="card-header bg-light">
+                <h5 class="mb-0"><i class="fas fa-list-ul me-2"></i>Danh sách người dùng</h5>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover table-striped mb-0">
+                        <thead class="table-dark">
+                            <tr>
+                                <th scope="col">Avatar</th>
+                                <th scope="col">Tên đăng nhập</th>
+                                <th scope="col">Họ và Tên</th>
+                                <th scope="col">Email</th>
+                                <th scope="col">Vai trò</th>
+                                <th scope="col">Ngày tham gia</th>
+                                <th scope="col">Trạng thái</th>
+                                <th scope="col" class="text-center">Hành động</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for u_item in users %}
+                            <tr>
+                                <td>
+                                    {% if u_item.profile and u_item.profile.avatar and u_item.profile.avatar.name %}
+                                        <img src="{{ u_item.profile.avatar.url }}" alt="{{ u_item.username }}" class="table-avatar">
+                                    {% else %}
+                                        <img src="{% static 'core/images/default_placeholder_avatar.png' %}" alt="Default Avatar" class="table-avatar">
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <a href="{% url 'profile' u_item.username %}" class="fw-bold text-decoration-none">{{ u_item.username }}</a>
+                                    {% if u_item.is_superuser %}<span class="badge bg-danger ms-1">Superuser</span>{% endif %}
+                                </td>
+                                <td>{{ u_item.get_full_name|default:"Chưa cập nhật" }}</td>
+                                <td>{{ u_item.email }}</td>
+                                <td>
+                                    <span class="badge
+                                        {% if u_item.role == 'admin' or u_item.is_superuser %}bg-danger{% elif u_item.role == 'mod' %}bg-info text-dark{% else %}bg-secondary{% endif %}">
+                                        {{ u_item.get_role_display }}
+                                    </span>
+                                </td>
+                                <td>{{ u_item.date_joined|date:"d/m/Y H:i" }}</td>
+                                <td>
+                                    {% if u_item.is_active %}
+                                        <span class="badge bg-success">Hoạt động</span>
+                                    {% else %}
+                                        <span class="badge bg-warning text-dark">Vô hiệu hóa</span>
+                                    {% endif %}
+                                </td>
+                                <td class="text-center">
+                                    <a href="{% url 'admin:core_customuser_change' u_item.id %}" class="action-icon text-primary me-2" title="Sửa người dùng (Admin UI)">
+                                        <i class="fas fa-edit"></i>
+                                    </a>
+                                    {% comment %} Logic kiểm tra quyền xóa đã được đơn giản hóa ở đây, bạn có thể điều chỉnh lại trong view nếu cần {% endcomment %}
+                                    {% if request.user != u_item %}
+                                        {% if u_item.is_superuser and not request.user.is_superuser %}
+                                            <button class="btn btn-link text-muted p-0 action-icon" disabled title="Không thể xóa Superuser này">
+                                                <i class="fas fa-trash-alt"></i>
+                                            </button>
+                                        {% else %}
+                                            <form action="{% url 'admin_delete_user' u_item.username %}" method="POST" class="d-inline" onsubmit="return confirm('Bạn có chắc chắn muốn xóa người dùng {{ u_item.username }}? Hành động này không thể hoàn tác.');">
+                                                {% csrf_token %}
+                                                <button type="submit" class="btn btn-link text-danger p-0 action-icon" title="Xóa người dùng {{ u_item.username }}">
+                                                    <i class="fas fa-trash-alt"></i>
+                                                </button>
+                                            </form>
+                                        {% endif %}
+                                    {% else %}
+                                        <button class="btn btn-link text-muted p-0 action-icon" disabled title="Không thể xóa chính mình">
+                                            <i class="fas fa-trash-alt"></i>
+                                        </button>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="8" class="text-center text-muted py-4">Không có người dùng nào trong hệ thống.</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<script>
+function confirmDelete() {
+    const usernameInput = document.getElementById('delete_user_username_input');
+    if (usernameInput && usernameInput.value.trim() !== "") {
+        if (confirm(`Bạn có chắc chắn muốn xóa người dùng "${usernameInput.value.trim()}"? Hành động này không thể hoàn tác.`)) {
+            document.getElementById('deleteUserForm').submit();
+        }
+    } else {
+        alert("Vui lòng nhập tên đăng nhập của người dùng cần xóa.");
+    }
+}
+</script>
+{% endblock %}
+
+{% block extra_scripts %}
+    {{ block.super }}
+{% endblock %}

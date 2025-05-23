@@ -1,0 +1,59 @@
+{% load static %}
+
+<div class="modal-header">
+    <h5 class="modal-title" id="groupMembersModalLabel-{{ group.id }}">
+        <i class="fas fa-users me-2"></i>Thành viên nhóm: {{ group.name|default:"Nhóm Chat" }}
+    </h5>
+    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+</div>
+
+<div class="modal-body" style="max-height: 60vh; overflow-y: auto;">
+    {% if group.members.all %}
+        <p class="text-muted small">{{ group.members.count }} thành viên</p>
+        <ul class="list-group list-group-flush">
+            {% for member in group.members.all %}
+            <li class="list-group-item px-0 py-2">
+                <div class="d-flex justify-content-between align-items-center">
+                    <a href="{% url 'profile' member.username %}" class="text-decoration-none text-dark d-flex align-items-center">
+                        <img src="{{ member.profile.avatar.url }}" alt="{{ member.username }}" class="rounded-circle me-3" width="45" height="45" style="object-fit: cover;">
+                        <div>
+                            <h6 class="mb-0">{{ member.get_full_name|default:member.username }}</h6>
+                            <small class="text-muted">@{{ member.username }}</small>
+                        </div>
+                    </a>
+                    <div>
+                        {% if member == group.creator %}
+                            <span class="badge bg-success rounded-pill px-2 py-1">Người thành lập nhóm</span> {# [cite: 40] #}
+                        {% else %}
+                            <span class="badge bg-secondary rounded-pill px-2 py-1">Thành viên</span> {# [cite: 40] #}
+                        {% endif %}
+                        {# Thêm nút Xóa thành viên nếu người xem là creator và member không phải là creator #}
+                        {% if request.user == group.creator and member != group.creator %}
+                            <button class="btn btn-sm btn-outline-danger ms-2 remove-member-btn"
+                                    data-group-id="{{ group.id }}"
+                                    data-member-id="{{ member.id }}"
+                                    title="Xóa thành viên này khỏi nhóm">
+                                <i class="fas fa-user-minus"></i>
+                            </button>
+                        {% endif %}
+                    </div>
+                </div>
+            </li>
+            {% endfor %}
+        </ul>
+    {% else %}
+        <p class="text-muted text-center">Không có thành viên nào trong nhóm này.</p>
+    {% endif %}
+</div>
+
+<div class="modal-footer">
+    {% if request.user == group.creator %}
+    <button type="button" class="btn btn-outline-primary btn-sm add-members-btn" data-group-id="{{ group.id }}">
+        <i class="fas fa-user-plus"></i> Thêm thành viên
+    </button>
+    {% endif %}
+    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Đóng</button>
+</div>
+
+{# Script xử lý xóa thành viên (nếu có) sẽ được đặt ở template cha gọi modal này #}
+{# hoặc bạn có thể đặt event listener chung cho class .remove-member-btn #}

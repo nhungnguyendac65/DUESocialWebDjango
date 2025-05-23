@@ -1,0 +1,164 @@
+{% extends "core/base.html" %}
+{% load static %}
+{% load humanize %}
+
+{% block title %}Sự kiện - DUE Network{% endblock %}
+
+{% block extra_head %}
+<style>
+    .event-list-page-wrapper {
+        background-color: #f8f9fa;
+        padding: 1.5rem;
+    }
+    .event-card { /* Style chung cho card sự kiện nếu cần */
+        transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+    }
+    .event-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 .5rem 1rem rgba(0,0,0,.15)!important;
+    }
+    .event-card .card-img-top-container {
+        height: 200px; /* Chiều cao cố định cho ảnh sự kiện */
+        overflow: hidden;
+        background-color: #e9ecef; /* Màu nền nếu không có ảnh */
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    .event-card .card-img-top-container img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+    .event-card .event-tags {
+        position: absolute;
+        top: 0.75rem;
+        left: 0.75rem;
+        z-index: 10;
+    }
+    .event-card .event-tags .badge {
+        margin-right: 0.25rem;
+        font-size: 0.75em;
+        padding: 0.4em 0.6em;
+    }
+    .event-card .card-title {
+        font-weight: 600;
+        color: #333;
+        display: -webkit-box;
+        -webkit-line-clamp: 2; /* Giới hạn 2 dòng */
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        min-height: 2.4em; /* Đảm bảo chiều cao cho 2 dòng title */
+    }
+    .event-card .card-text {
+         display: -webkit-box;
+        -webkit-line-clamp: 3; /* Giới hạn 3 dòng */
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        font-size: 0.9rem;
+        min-height: 4.2em; /* Đảm bảo chiều cao cho 3 dòng content */
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="event-list-page-wrapper">
+    <div class="container-fluid">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2 class="mb-0"><i class="fas fa-calendar-alt text-primary me-2"></i>Sự kiện nổi bật</h2>
+            <div>
+                {% if can_create_event %}
+                <a href="{% url 'create_event' %}" class="btn btn-success btn-sm me-2">
+                    <i class="fas fa-plus-circle"></i> Tạo sự kiện
+                </a>
+                {% else %}
+                <button type="button" class="btn btn-success btn-sm me-2" onclick="alert('Bạn không có quyền tạo sự kiện!');">
+                    <i class="fas fa-plus-circle"></i> Tạo sự kiện
+                </button>
+                {% endif %}
+                <a href="{% url 'my_events' %}" class="btn btn-info btn-sm me-2">
+                    <i class="fas fa-calendar-check"></i> Sự kiện của tôi
+                </a>
+                <button class="btn btn-primary btn-sm" type="button" data-bs-toggle="modal" data-bs-target="#filterEventsModal">
+                    <i class="fas fa-filter"></i> Lọc
+                </button>
+            </div>
+        </div>
+
+        {% if messages %}
+            {% for message in messages %}
+                <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            {% endfor %}
+        {% endif %}
+
+        {% if selected_tag_object %}
+            <div class="alert alert-info py-2 px-3 mb-3 small" role="alert">
+                Đang hiển thị các sự kiện được gắn thẻ: <strong>{{ selected_tag_object.name }}</strong>.
+                <a href="{% url 'event_list' %}" class="alert-link ms-2 fw-normal">Xem tất cả sự kiện</a>
+            </div>
+        {% endif %}
+
+        <div class="row g-3"> {# Sử dụng g-3 (gap) để tạo khoảng cách giữa các cột #}
+            {% for event_item in events %} {# Đổi tên biến để tránh nhầm lẫn với event trong _event_card #}
+                <div class="col-sm-6 col-md-4 col-lg-3"> {# Bố cục cột, ví dụ: 4 cột trên LG, 3 trên MD, 2 trên SM #}
+                    {% include "core/partials/_event_card.html" with event=event_item %}
+                </div>
+            {% empty %}
+                <div class="col-12">
+                    <div class="alert alert-light text-center mt-4" role="alert">
+                        <i class="fas fa-info-circle fa-2x mb-2 text-muted"></i><br>
+                        {% if selected_tag_object %}
+                            Không tìm thấy sự kiện nào phù hợp với thẻ "{{ selected_tag_object.name }}".
+                        {% else %}
+                            Hiện chưa có sự kiện nào.
+                        {% endif %}
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+        {# Thêm pagination nếu cần #}
+    </div>
+</div>
+
+<div class="modal fade" id="filterEventsModal" tabindex="-1" aria-labelledby="filterEventsModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="filterEventsModalLabel">Lọc sự kiện theo Tag</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <form method="GET" action="{% url 'event_list' %}">
+          <div class="modal-body">
+              <p>Chọn một thẻ để lọc:</p>
+              {% for tag_item in available_tags %}
+              <div class="form-check">
+                  <input class="form-check-input" type="radio" name="tag_filter" id="tag-filter-{{ tag_item.id }}" value="{{ tag_item.id }}" {% if selected_tag_object and selected_tag_object.id == tag_item.id %}checked{% endif %}>
+                  <label class="form-check-label" for="tag-filter-{{ tag_item.id }}">
+                      {{ tag_item.name }}
+                  </label>
+              </div>
+              {% endfor %}
+              {% if not available_tags %}
+                <p class="text-muted">Không có thẻ nào để lọc.</p>
+              {% endif %}
+          </div>
+          <div class="modal-footer">
+            <a href="{% url 'event_list' %}" class="btn btn-outline-secondary btn-sm">Xóa bộ lọc</a>
+            <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Đóng</button>
+            <button type="submit" class="btn btn-primary btn-sm">Xác nhận</button>
+          </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+    {{ block.super }}
+    <script src="{% static 'core/js/event_interactions.js' %}"></script> {# File này sẽ chứa logic AJAX cho like event #}
+{% endblock %}

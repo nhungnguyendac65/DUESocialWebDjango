@@ -1,0 +1,17 @@
+{% load static %}
+<div class="comment-item d-flex mb-3" id="comment-{{ comment.id }}">
+    <a href="{% url 'profile' comment.author.username %}" class="flex-shrink-0">
+        <img src="{{ comment.author.profile.avatar.url }}" alt="{{ comment.author.username }}" class="rounded-circle me-2" width="35" height="35">
+    </a>
+    <div class="flex-grow-1">
+        <div class="bg-light p-2 rounded">
+            <a href="{% url 'profile' comment.author.username %}" class="text-decoration-none fw-bold text-dark">{{ comment.author.get_full_name|default:comment.author.username }}</a>
+            <p class="mb-0 small">{{ comment.content|linebreaksbr }}</p>
+        </div>
+        <small class="text-muted ms-2">{{ comment.created_at|timesince }} ago
+            {% if comment.author == request.user or request.user.role in "mod admin" %}
+            &bull; <a href="#" class="text-danger small delete-comment-btn" data-comment-id="{{ comment.id }}">Xóa</a>
+            {% endif %}
+        </small>
+    </div>
+</div>

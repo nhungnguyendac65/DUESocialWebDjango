@@ -1,0 +1,150 @@
+{% extends "core/base.html" %}
+{% load static %}
+
+{% block title %}
+    {% if group.is_private_chat and other_user %}
+        Chat với {{ other_user.get_full_name|default:other_user.username }}
+    {% else %}
+        {{ group.name|default:"Nhóm Chat" }}
+    {% endif %} - DUE Network
+{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/ekko-lightbox/5.3.0/ekko-lightbox.css">
+<style>
+    /* CSS cho message_center và chat_room_content có thể gộp và tối ưu ở file static/core/css/messaging.css */
+    .chat-header, .chat-messages, .chat-input-area {
+        /* styles from chat_room_content */
+    }
+    .message-bubble { /* ... */ }
+    .main-content {
+        display: flex;
+        flex-direction: column;
+        height: calc(100vh - 56px); /* 56px là chiều cao navbar ví dụ */
+    }
+    .content-area { /* Cho phép chat_room_content chiếm toàn bộ không gian còn lại */
+        flex-grow: 1;
+        display: flex;
+        flex-direction: column;
+        padding: 0 !important; /* Ghi đè padding của base nếu cần */
+    }
+</style>
+{% endblock %}
+
+
+{% block content %}
+    {# Container này sẽ được chat_room_content.html điền vào #}
+    <div class="d-flex flex-column h-100">
+        {% include "core/messaging/chat_room_content.html" %}
+    </div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/ekko-lightbox/5.3.0/ekko-lightbox.min.js"></script>
+<script src="{% static 'core/js/messaging_handler.js' %}"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Auto scroll to bottom
+    const chatMessagesContainer = document.getElementById('chat-messages-container-{{ group.id }}');
+    if (chatMessagesContainer) {
+        chatMessagesContainer.scrollTop = chatMessagesContainer.scrollHeight;
+    }
+
+    // Lightbox for images
+    $(document).on('click', '[data-bs-toggle="lightbox"]', function(event) {
+        event.preventDefault();
+        $(this).ekkoLightbox();
+    });
+
+    // Handle attachment buttons
+    const attachFileBtn = document.getElementById('attachFileBtn-{{group.id}}');
+    const fileAttachmentInput = document.getElementById('fileAttachmentInput-{{group.id}}');
+    const attachImageBtn = document.getElementById('attachImageBtn-{{group.id}}');
+    const imageAttachmentInput = document.getElementById('imageAttachmentInput-{{group.id}}');
+    const attachmentPreview = document.getElementById('attachmentPreview-{{group.id}}');
+
+    if(attachFileBtn) attachFileBtn.addEventListener('click', () => fileAttachmentInput.click());
+    if(attachImageBtn) attachImageBtn.addEventListener('click', () => imageAttachmentInput.click());
+
+    function displayPreview(input, previewElement) {
+        if (input.files && input.files[0]) {
+            const fileName = input.files[0].name;
+            let iconClass = "fa-file";
+            if (input.files[0].type.startsWith("image/")) {
+                iconClass = "fa-file-image";
+            }
+            previewElement.innerHTML = `
+                <div class="alert alert-info alert-dismissible fade show py-1 px-2 mt-1" role="alert">
+                    <small><i class="fas ${iconClass} me-1"></i> ${fileName}</small>
+                    <button type="button" class="btn-close btn-sm py-0 px-1" style="font-size:0.7rem;" data-bs-dismiss="alert" aria-label="Close" onclick="clearFileInput('${input.id}')"></button>
+                </div>`;
+        } else {
+            previewElement.innerHTML = '';
+        }
+    }
+    window.clearFileInput = function(inputId) { // Make it global for the inline onclick
+        document.getElementById(inputId).value = ''; // Clear the file input
+        // Optionally, manually trigger dismiss if not happening automatically
+        const alertElement = document.querySelector(`#attachmentPreview-{{group.id}} .alert`);
+        if (alertElement) {
+            var bsAlert = new bootstrap.Alert(alertElement);
+            // bsAlert.close(); // This might not work as expected for dynamic content
+            alertElement.remove();
+        }
+    }
+
+
+    if(fileAttachmentInput) fileAttachmentInput.addEventListener('change', () => displayPreview(fileAttachmentInput, attachmentPreview));
+    if(imageAttachmentInput) imageAttachmentInput.addEventListener('change', () => displayPreview(imageAttachmentInput, attachmentPreview));
+
+
+    // Xử lý AJAX cho block user (nếu cần cập nhật UI động)
+    document.querySelectorAll('.block-user-btn').forEach(button => {
+        button.addEventListener('click', function() {
+            const userIdToBlock = this.dataset.userId;
+            const groupId = this.dataset.groupId; // Lấy group ID để có thể refresh đúng phần
+            const csrftoken = getCookie('csrftoken');
+
+            if (confirm(this.textContent.trim() + "?")) {
+                fetch(`/messages/block_user/${userIdToBlock}/`, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': csrftoken,
+                        'Content-Type': 'application/json'
+                    },
+                })
+                .then(response => response.json())
+                .then(data => {
+                    alert(data.message);
+                    if (data.blocked_status !== undefined) {
+                        this.textContent = data.blocked_status ? 'Bỏ chặn người này' : 'Chặn người này';
+                        // Nếu chặn thành công và đang ở chat room, có thể redirect hoặc disable input
+                        if (data.blocked_status) {
+                            // Disable form gửi tin nhắn hoặc thông báo
+                            const messageForm = document.getElementById('message-form-' + groupId);
+                            if(messageForm) {
+                                messageForm.querySelector('input[name="content"]').disabled = true;
+                                messageForm.querySelector('button[type="submit"]').disabled = true;
+                                const blockedInfo = document.createElement('p');
+                                blockedInfo.className = 'text-danger text-center mt-2 small';
+                                blockedInfo.textContent = 'Bạn đã chặn người này. Bỏ chặn để tiếp tục nhắn tin.';
+                                messageForm.insertAdjacentElement('afterend', blockedInfo);
+                            }
+                        } else { // Bỏ chặn
+                             const messageForm = document.getElementById('message-form-' + groupId);
+                             if(messageForm) {
+                                messageForm.querySelector('input[name="content"]').disabled = false;
+                                messageForm.querySelector('button[type="submit"]').disabled = false;
+                                const blockedInfo = messageForm.parentElement.querySelector('.text-danger.text-center.mt-2.small');
+                                if(blockedInfo) blockedInfo.remove();
+                             }
+                        }
+                    }
+                })
+                .catch(error => console.error('Error blocking user:', error));
+            }
+        });
+    });
+});
+</script>
+{% endblock %}
