@@ -1,0 +1,111 @@
+{% load static %}
+<nav class="navbar navbar-expand-lg navbar-light bg-white border-bottom sticky-top">
+    <div class="container-fluid px-4">
+        <!-- Logo ở bên trái -->
+        <a class="navbar-brand" href="{% url 'home' %}">
+            <img src="{% static 'core/images/due_network_logo_small.png' %}" alt="DUE Network" height="55" width="120">
+        </a>
+
+        <!-- Search bar ở giữa -->
+        <div class="search-container mx-auto">
+            <form action="{% url 'search' %}" method="GET" role="search">
+                <div class="search-wrapper">
+                    <i class="fas fa-search search-icon"></i>
+                    <input type="search" name="q" placeholder="Tìm kiếm gì đó đi..." value="{{ request.GET.q }}">
+                </div>
+            </form>
+        </div>
+
+        <!-- User dropdown ở bên phải -->
+        <div class="user-profile">
+            {% if user.is_authenticated %}
+            <div class="dropdown">
+                <a class="profile-link" href="#" id="navbarDropdownUser" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                    {% if user.profile and user.profile.avatar and user.profile.avatar.name %}
+                        <img src="{{ user.profile.avatar.url }}" alt="{{ user.username }}" class="rounded-circle">
+                    {% else %}
+                        <img src="{% static 'core/images/default_placeholder_avatar.png' %}" alt="{{ user.username }}" class="rounded-circle">
+                    {% endif %}
+                </a>
+                <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="navbarDropdownUser">
+                    <li><a class="dropdown-item" href="{% url 'profile' user.username %}">Trang cá nhân</a></li>
+                    <li><a class="dropdown-item" href="{% url 'settings' %}">Cài đặt</a></li>
+                    <li><hr class="dropdown-divider"></li>
+                    <li>
+                        <form method="post" action="{% url 'logout' %}">
+                            {% csrf_token %}
+                            <button type="submit" class="dropdown-item">Đăng xuất</button>
+                        </form>
+                    </li>
+                </ul>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</nav>
+<style>
+.navbar {
+    height: 60px;
+    padding: 0;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+}
+
+/* Search bar styling */
+.search-container {
+    width: 40%;
+    max-width: 500px;
+}
+
+.search-wrapper {
+    position: relative;
+    width: 100%;
+    background-color: #f0f2f5;
+    border-radius: 20px;
+    display: flex;
+    align-items: center;
+    padding: 0 15px;
+}
+
+.search-icon {
+    color: #65676b;
+    margin-right: 10px;
+}
+
+.search-wrapper input {
+    width: 100%;
+    height: 40px;
+    background: transparent;
+    border: none;
+    outline: none;
+    font-size: 14px;
+    color: #050505;
+}
+
+.search-wrapper input::placeholder {
+    color: #65676b;
+}
+
+/* User profile styling */
+.user-profile {
+    display: flex;
+    align-items: center;
+}
+
+.profile-link {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.profile-link img {
+    width: 36px;
+    height: 36px;
+    border: 1px solid #e4e6eb;
+}
+
+.dropdown-menu {
+    margin-top: 10px;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.1);
+    border: 1px solid #e4e6eb;
+}
+</style>

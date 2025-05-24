@@ -1,0 +1,148 @@
+{% load static %}
+{% load humanize %}
+
+<div class="chat-header p-3 border-bottom d-flex align-items-center sticky-top bg-light">
+    {% if group.is_private_chat and other_user %}
+        <a href="{% url 'profile' other_user.username %}" class="text-decoration-none text-dark d-flex align-items-center">
+            <img src="{{ other_user.profile.avatar.url }}" alt="{{ other_user.username }}" class="rounded-circle chat-avatar me-2">
+            <div class="flex-grow-1">
+                <h5 class="mb-0">{{ other_user.get_full_name|default:other_user.username }}</h5>
+                <small class="text-muted">@{{ other_user.username }}</small>
+            </div>
+        </a>
+    {% elif group %}
+        <span class="fa-stack fa-lg me-2">
+            <i class="fas fa-circle fa-stack-2x text-secondary"></i>
+            <i class="fas fa-users fa-stack-1x fa-inverse"></i>
+        </span>
+        <div class="flex-grow-1">
+            <h5 class="mb-0">{{ group.name|default:"Nhóm Chat" }}</h5>
+            <small class="text-muted">{{ group.members.count }} thành viên</small>
+        </div>
+    {% else %}
+        <h5 class="mb-0 text-muted">Chọn một cuộc trò chuyện</h5>
+    {% endif %}
+
+    {% if group %}
+    <div class="dropdown ms-auto">
+        <button class="btn btn-link text-muted" type="button" id="chatRoomOptions-{{ group.id }}" data-bs-toggle="dropdown" aria-expanded="false">
+            <i class="fas fa-ellipsis-v"></i>
+        </button>
+        <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="chatRoomOptions-{{ group.id }}">
+            {% if group.is_private_chat and other_user %}
+                <li><a class="dropdown-item" href="{% url 'profile' other_user.username %}"><i class="fas fa-user fa-fw me-2"></i>Xem trang cá nhân</a></li>
+                <li><hr class="dropdown-divider"></li>
+                <li>
+                    <button class="dropdown-item text-danger block-user-btn" data-user-id="{{ other_user.id }}" data-group-id="{{ group.id }}">
+                        <i class="fas fa-ban fa-fw me-2"></i>{% if is_blocked_by_me %}Bỏ chặn người này{% else %}Chặn người này{% endif %}
+                    </button>
+                </li>
+                <li><hr class="dropdown-divider"></li>
+                <li>
+                    <form action="{% url 'leave_group_view' group.id %}" method="POST" onsubmit="return confirm('Bạn có chắc muốn xóa cuộc trò chuyện này khỏi danh sách của bạn không? Tin nhắn sẽ vẫn hiển thị với người kia cho đến khi họ cũng xóa.');" class="d-inline">
+                        {% csrf_token %}
+                        <button type="submit" class="dropdown-item text-danger">
+                            <i class="fas fa-trash-alt fa-fw me-2"></i>Xóa cuộc trò chuyện
+                        </button>
+                    </form>
+                </li>
+            {% elif not group.is_private_chat %} {# Group chat options #}
+                <li><a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#groupMembersModal-{{ group.id }}"><i class="fas fa-users fa-fw me-2"></i>Xem thành viên nhóm</a></li>
+                {% if is_creator %}
+                <li><a class="dropdown-item" href="{% url 'add_members_to_group' group.id %}"><i class="fas fa-user-plus fa-fw me-2"></i>Thêm thành viên</a></li>
+                {% endif %}
+                <li><hr class="dropdown-divider"></li>
+                <li>
+                    <form action="{% url 'leave_group_view' group.id %}" method="POST" onsubmit="return confirm('Bạn có chắc muốn rời khỏi nhóm này không?');" class="d-inline">
+                        {% csrf_token %}
+                        <button type="submit" class="dropdown-item text-danger"><i class="fas fa-sign-out-alt fa-fw me-2"></i>Rời khỏi nhóm</button>
+                    </form>
+                </li>
+            {% endif %}
+        </ul>
+    </div>
+    {% endif %}
+</div>
+
+<div class="chat-messages flex-grow-1 p-3" style="overflow-y: auto;" id="chat-messages-container-{% if group %}{{ group.id }}{% else %}empty{% endif %}">
+    {% if group and messages_list %}
+        {% for message_item in messages_list %}
+            <div class="d-flex mb-2 {% if message_item.sender == request.user %}justify-content-end{% endif %}" id="message-{{ message_item.id }}">
+                {% if message_item.sender != request.user %}
+                <a href="{% url 'profile' message_item.sender.username %}" class="flex-shrink-0 align-self-end mb-1 me-2">
+                    <img src="{{ message_item.sender.profile.avatar.url }}" alt="{{ message_item.sender.username }}" class="rounded-circle" width="30" height="30" style="object-fit: cover;">
+                </a>
+                {% endif %}
+                <div class="message-bubble p-2 rounded {% if message_item.sender == request.user %}bg-primary text-white{% else %}bg-light text-dark shadow-sm{% endif %}" style="max-width: 70%;">
+                    {% if message_item.sender != request.user and not group.is_private_chat %} {# Hiển thị tên người gửi trong group chat, không cần trong chat 1-1 #}
+                    <small class="fw-bold d-block mb-1 {% if message_item.sender == request.user %}text-white-75{% else %}text-primary{% endif %}">{{ message_item.sender.get_full_name|default:message_item.sender.username }}</small>
+                    {% endif %}
+
+                    {% if message_item.image %}
+                        <a href="{{ message_item.image.url }}" data-bs-toggle="lightbox" data-gallery="chat-gallery-{% if group %}{{ group.id }}{% endif %}">
+                            <img src="{{ message_item.image.url }}" class="img-fluid rounded mb-1" style="max-height: 200px; cursor:pointer;" alt="Hình ảnh">
+                        </a>
+                    {% endif %}
+                    {% if message_item.file_attachment %}
+                        <div class="attachment-bubble p-2 rounded {% if message_item.sender == request.user %}bg-primary-subtle text-primary-emphasis {% else %}bg-body-secondary{% endif %} mb-1">
+                            <a href="{{ message_item.file_attachment.url }}" target="_blank" class="text-decoration-none {% if message_item.sender == request.user %}text-white{% else %}text-dark{% endif %}">
+                                <i class="fas fa-file-alt me-1"></i> {{ message_item.file_attachment.name|cut:"chat_files/"|truncatechars:30 }}
+                            </a>
+                        </div>
+                    {% endif %}
+                    {% if message_item.content %}
+                        <p class="mb-0 small">{{ message_item.content|linebreaksbr }}</p>
+                    {% endif %}
+                    <small class="message-timestamp d-block text-end mt-1 {% if message_item.sender == request.user %}text-white-50{% else %}text-muted{% endif %}">{{ message_item.timestamp|naturaltime }}</small>
+                </div>
+                 {% if message_item.sender == request.user %}
+                <a href="{% url 'profile' message_item.sender.username %}" class="flex-shrink-0 align-self-end mb-1 ms-2">
+                    <img src="{{ message_item.sender.profile.avatar.url }}" alt="{{ message_item.sender.username }}" class="rounded-circle" width="30" height="30" style="object-fit: cover;">
+                </a>
+                {% endif %}
+            </div>
+        {% endfor %}
+    {% elif group %}
+        <p class="text-center text-muted mt-5" id="no-messages-yet-{% if group %}{{ group.id }}{% endif %}">
+            <i class="far fa-comment-dots fa-2x mb-2"></i><br>
+            Chưa có tin nhắn nào. Bắt đầu cuộc trò chuyện!
+        </p>
+    {% else %}
+        <div class="d-flex flex-column justify-content-center align-items-center h-100 text-center">
+            <i class="far fa-comments fa-5x text-muted mb-3"></i>
+            <h4>Chọn một cuộc trò chuyện</h4>
+            <p class="text-muted">Hoặc bắt đầu một <a href="#" data-bs-toggle="modal" data-bs-target="#startNewPrivateChatModal">cuộc trò chuyện mới</a>.</p>
+        </div>
+    {% endif %}
+</div>
+
+{% if group %}
+<div class="chat-input-area p-3 border-top bg-light">
+    <form method="POST" action="{% url 'send_message' group.id %}" id="message-form-{{ group.id }}" class="message-form-ajax" data-group-id="{{ group.id }}" enctype="multipart/form-data">
+        {% csrf_token %}
+        <div id="attachmentPreview-{{group.id}}" class="mb-2"></div> {# Nơi hiển thị preview file/ảnh đã chọn #}
+        <div class="input-group">
+             <button class="btn btn-light border" type="button" id="attachFileBtn-{{group.id}}" title="Đính kèm file"><i class="fas fa-paperclip"></i></button>
+            <input type="file" name="file_attachment" id="fileAttachmentInput-{{group.id}}" class="d-none">
+
+            <button class="btn btn-light border" type="button" id="attachImageBtn-{{group.id}}" title="Đính kèm ảnh"><i class="fas fa-image"></i></button>
+            <input type="file" name="image" accept="image/*" id="imageAttachmentInput-{{group.id}}" class="d-none">
+
+            <textarea name="content" class="form-control" placeholder="Nhập tin nhắn..." autocomplete="off" rows="1" style="resize:none;" id="messageTextarea-{{group.id}}" required></textarea>
+            <button class="btn btn-primary" type="submit" title="Gửi tin nhắn">
+                <i class="fas fa-paper-plane"></i>
+            </button>
+        </div>
+    </form>
+</div>
+{% endif %}
+
+{% if group and not group.is_private_chat %}
+<div class="modal fade" id="groupMembersModal-{{ group.id }}" tabindex="-1" aria-labelledby="groupMembersModalLabel-{{ group.id }}" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable modal-dialog-centered">
+    <div class="modal-content">
+        {% include "core/messaging/group_members.html" with group=group %}
+    </div>
+  </div>
+</div>
+{% endif %}

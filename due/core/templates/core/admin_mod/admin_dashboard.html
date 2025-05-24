@@ -1,0 +1,225 @@
+{% extends "core/base.html" %}
+{% load static %}
+{% load humanize %}
+
+{% block title %}Bảng điều khiển Quản trị - DUE Network{% endblock %}
+
+{% block extra_head %}
+<style>
+    .admin-dashboard-wrapper {
+        background-color: #f4f6f9;
+        padding: 1.5rem;
+        min-height: calc(100vh - 56px);
+    }
+    .info-box {
+        display: flex;
+        align-items: center;
+        background-color: #fff;
+        border-radius: 0.375rem;
+        padding: 1.25rem;
+        margin-bottom: 1rem;
+        box-shadow: 0 0 1px rgba(0,0,0,.125), 0 1px 3px rgba(0,0,0,.2);
+        transition: transform 0.2s ease-in-out;
+    }
+    .info-box:hover {
+        transform: translateY(-3px);
+    }
+    .info-box-icon {
+        font-size: 2.5rem;
+        width: 70px;
+        height: 70px;
+        line-height: 70px;
+        text-align: center;
+        border-radius: 50%;
+        margin-right: 1rem;
+        color: #fff;
+    }
+    .info-box-content {
+        flex-grow: 1;
+    }
+    .info-box-text {
+        text-transform: uppercase;
+        font-size: 0.875rem;
+        color: #6c757d;
+    }
+    .info-box-number {
+        font-size: 1.75rem;
+        font-weight: bold;
+        color: #343a40;
+    }
+    .quick-links .list-group-item {
+        border-left: 0;
+        border-right: 0;
+        border-radius: 0;
+        padding: 0.85rem 1.25rem;
+        transition: background-color 0.15s ease-in-out;
+        color: #343a40;
+        font-weight: 500;
+    }
+    .quick-links .list-group-item:first-child { border-top: 0; }
+    .quick-links .list-group-item:last-child { border-bottom: 0; }
+    .quick-links .list-group-item:hover {
+        background-color: #e9ecef;
+        color: #00095E;
+    }
+    .quick-links .list-group-item i {
+        width: 20px;
+        margin-right: 0.75rem;
+        text-align: center;
+        color: #00095E;
+    }
+    /* CSS cho Recent Activities */
+    .recent-activity-item {
+        border-bottom: 1px solid #e9ecef;
+        padding-bottom: 0.75rem;
+        margin-bottom: 0.75rem;
+    }
+    .recent-activity-item:last-child {
+        border-bottom: none;
+        margin-bottom: 0;
+        padding-bottom: 0;
+    }
+    .recent-activity-item .activity-actor {
+        font-weight: 500;
+    }
+    .recent-activity-item .activity-time {
+        font-size: 0.8em;
+    }
+    .recent-activity-item .activity-description {
+        font-size: 0.9em;
+        color: #495057;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="admin-dashboard-wrapper">
+    <div class="container-fluid">
+        <div class="d-sm-flex align-items-center justify-content-between mb-4">
+            <h1 class="h3 mb-0" style="color: #343a40;">Bảng điều khiển Quản trị</h1>
+        </div>
+
+        {% if messages %}
+            {% for message in messages %}
+                <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            {% endfor %}
+        {% endif %}
+
+        <div class="row">
+            {# ... (Phần info-box giữ nguyên) ... #}
+            <div class="col-xl-3 col-md-6 mb-4">
+                <div class="info-box">
+                    <span class="info-box-icon bg-info"><i class="fas fa-users"></i></span>
+                    <div class="info-box-content">
+                        <span class="info-box-text">Tổng người dùng</span>
+                        <span class="info-box-number">{{ user_count|intcomma }}</span>
+                    </div>
+                </div>
+            </div>
+            <div class="col-xl-3 col-md-6 mb-4">
+                <div class="info-box">
+                    <span class="info-box-icon bg-success"><i class="fas fa-file-alt"></i></span>
+                    <div class="info-box-content">
+                        <span class="info-box-text">Tổng bài viết</span>
+                        <span class="info-box-number">{{ post_count|intcomma }}</span>
+                    </div>
+                </div>
+            </div>
+            <div class="col-xl-3 col-md-6 mb-4">
+                <div class="info-box">
+                    <span class="info-box-icon bg-warning"><i class="fas fa-calendar-alt"></i></span>
+                    <div class="info-box-content">
+                        <span class="info-box-text">Tổng sự kiện</span>
+                        <span class="info-box-number">{{ event_count|intcomma }}</span>
+                    </div>
+                </div>
+            </div>
+            <div class="col-xl-3 col-md-6 mb-4">
+                <div class="info-box">
+                    <span class="info-box-icon bg-danger"><i class="fas fa-exclamation-triangle"></i></span>
+                    <div class="info-box-content">
+                        <span class="info-box-text">Báo cáo chờ xử lý</span>
+                        <span class="info-box-number">{{ pending_reports_count|intcomma }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-lg-6 mb-4">
+                <div class="card shadow-sm">
+                    <div class="card-header py-3 bg-light border-bottom">
+                        <h6 class="m-0 fw-bold" style="color: #00095E;"><i class="fas fa-link me-2"></i>Truy cập nhanh</h6>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="list-group list-group-flush quick-links">
+                            <a href="{% url 'manage_users' %}" class="list-group-item list-group-item-action">
+                                <i class="fas fa-users-cog"></i>Quản lý người dùng
+                            </a>
+                            <a href="{% url 'admin_add_user' %}" class="list-group-item list-group-item-action">
+                                <i class="fas fa-user-plus"></i>Thêm người dùng mới
+                            </a>
+                            <a href="{% url 'admin_add_mod' %}" class="list-group-item list-group-item-action">
+                                <i class="fas fa-user-shield"></i>Thêm/Quản lý Moderator
+                            </a>
+                            <a href="{% url 'reported_posts' %}" class="list-group-item list-group-item-action">
+                                <i class="fas fa-flag"></i>Xem các báo cáo vi phạm
+                            </a>
+                             <a href="{% url 'create_event' %}" class="list-group-item list-group-item-action">
+                                <i class="fas fa-calendar-plus"></i>Tạo sự kiện mới
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {# SỬA PHẦN HOẠT ĐỘNG GẦN ĐÂY #}
+            <div class="col-lg-6 mb-4">
+                <div class="card shadow-sm">
+                    <div class="card-header py-3 bg-light border-bottom">
+                        <h6 class="m-0 fw-bold" style="color: #00095E;"><i class="fas fa-history me-2"></i>Hoạt động gần đây</h6>
+                    </div>
+                    <div class="card-body" style="max-height: 350px; overflow-y: auto;"> {# Tăng max-height một chút #}
+                        {% if recent_activities %}
+                            <ul class="list-unstyled">
+                                {% for activity in recent_activities %}
+                                <li class="recent-activity-item">
+                                    <div class="d-flex justify-content-between">
+                                        <span class="activity-actor">
+                                            {% if activity.actor %}
+                                                <i class="fas fa-user-circle text-muted me-1"></i>
+                                                <a href="{% if activity.actor.is_superuser or activity.actor.role == 'admin' %}{% url 'admin:core_customuser_change' activity.actor.id %}{% else %}{% url 'profile' activity.actor.username %}{% endif %}" class="text-decoration-none">
+                                                    {{ activity.actor.username }}
+                                                </a>
+                                            {% else %}
+                                                <i class="fas fa-cogs text-muted me-1"></i>
+                                                Hệ thống
+                                            {% endif %}
+                                        </span>
+                                        <small class="text-muted activity-time">{{ activity.timestamp|naturaltime }}</small>
+                                    </div>
+                                    <p class="mb-0 activity-description mt-1">
+                                        {{ activity.description|truncatechars:150 }}
+                                        {# Hoặc bạn có thể dùng: {{ activity.get_action_type_display }}: {{ activity.description }} #}
+                                    </p>
+                                </li>
+                                {% endfor %}
+                            </ul>
+                        {% else %}
+                            <p class="text-muted text-center py-3">Chưa có hoạt động nào được ghi lại gần đây.</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            {# KẾT THÚC PHẦN SỬA #}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+    {{ block.super }}
+{% endblock %}

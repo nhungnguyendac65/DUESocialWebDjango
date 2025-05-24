@@ -1,0 +1,89 @@
+{% load static %}
+{% load humanize %}
+
+<div class="card h-100 event-card shadow-sm" id="event-{{ event.id }}">
+    <div class="card-img-top-container position-relative">
+        {% if event.image %}
+            <img src="{{ event.image.url }}" class="card-img-top" alt="{{ event.title }}">
+        {% else %}
+            <div class="d-flex align-items-center justify-content-center h-100 bg-light">
+                <i class="fas fa-image fa-3x text-muted"></i>
+            </div>
+        {% endif %}
+        {# Tag hiển thị trên ảnh (hoặc gần tiêu đề nếu không có ảnh) - ĐÃ CHUYỂN XUỐNG DƯỚI #}
+    </div>
+    <div class="card-body d-flex flex-column">
+        {# TAGS HIỂN THỊ NGAY TRÊN TIÊU ĐỀ #}
+        {% if event.tags.all %}
+            <div class="event-tags-on-title mb-1">
+                {% for tag in event.tags.all|slice:":2" %} {# Hiển thị tối đa 2 tag #}
+                    <span class="badge bg-primary text-white me-1" style="font-size: 0.7rem; padding: 0.3em 0.5em;">{{ tag.name }}</span>
+                {% endfor %}
+            </div>
+        {% endif %}
+
+        <div class="d-flex justify-content-between align-items-start">
+            <a href="{% url 'event_detail' event.id %}" class="text-decoration-none flex-grow-1">
+                <h5 class="card-title mb-2 me-2 event-title-limited">{{ event.title }}</h5>
+            </a>
+            {# NÚT 3 CHẤM CHO EVENT #}
+            {% if user.is_authenticated %}
+            <div class="dropdown event-options-dropdown ms-auto flex-shrink-0">
+                <button class="btn btn-sm btn-link text-muted py-0 px-1" type="button" id="eventOptionsDropdown-{{ event.id }}" data-bs-toggle="dropdown" aria-expanded="false">
+                    <i class="fas fa-ellipsis-h"></i>
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end shadow border-0" aria-labelledby="eventOptionsDropdown-{{ event.id }}">
+                    {% if event.creator == request.user %}
+                        {# Người tạo sự kiện (Mod/Admin) có thể sửa/xóa #}
+                        <li><a class="dropdown-item" href="{% url 'edit_event' event.id %}"><i class="fas fa-edit fa-fw me-2"></i>Sửa sự kiện</a></li>
+                        <li>
+                            <form action="{% url 'delete_event' event.id %}" method="POST" onsubmit="return confirm('Bạn chắc chắn muốn xóa sự kiện này? Hành động này không thể hoàn tác.');" class="d-inline">
+                                {% csrf_token %}
+                                <button type="submit" class="dropdown-item text-danger"><i class="fas fa-trash-alt fa-fw me-2"></i>Xóa sự kiện</button>
+                            </form>
+                        </li>
+                    {% else %}
+                        {# Người dùng khác có thể báo cáo #}
+                        <li><a class="dropdown-item" href="{% url 'report_event' event.id %}"><i class="fas fa-flag fa-fw me-2"></i>Báo cáo sự kiện</a></li>
+                    {% endif %}
+
+                    {# Admin/Mod khác (không phải người tạo) có thể có thêm quyền xóa #}
+                    {% if request.user.role in "mod admin" and event.creator != request.user and request.user.is_superuser %} {# Chỉ superuser mới có quyền xóa sự kiện của Mod khác #}
+                        <li><hr class="dropdown-divider my-1"></li>
+                        <li>
+                            <form action="{% url 'delete_event' event.id %}" method="POST" onsubmit="return confirm('Bạn (Quản trị viên) có chắc chắn muốn xóa sự kiện này của @{{event.creator.username}}?');" class="d-inline">
+                                {% csrf_token %}
+                                <button type="submit" class="dropdown-item text-danger"><i class="fas fa-user-shield fa-fw me-2"></i>Xóa (QTV) </button>
+                            </form>
+                        </li>
+                    {% endif %}
+                </ul>
+            </div>
+            {% endif %} {# Kết thúc if user.is_authenticated #}
+        </div>
+
+        <p class="card-text text-muted flex-grow-1 event-content-limited">{{ event.content|truncatewords_html:20 }}</p>
+        <small class="text-muted">
+            Tạo bởi:
+            <a href="{% if event.creator %}{% url 'profile' event.creator.username %}{% else %}#{% endif %}" class="text-decoration-none">
+                @{{ event.creator.username|default:'N/A' }}
+            </a>
+            - {{ event.created_at|naturaltime }}
+        </small>
+    </div>
+    <div class="card-footer bg-white d-flex justify-content-around py-1 border-top-0">
+        <button class="btn btn-sm btn-link text-muted like-event-btn {% if event.is_liked_by_user %}text-danger{% endif %}"
+                data-event-id="{{ event.id }}"
+                title="Thích sự kiện này">
+            <i class="fa-heart {% if event.is_liked_by_user %}fas text-danger{% else %}far{% endif %}"></i>
+            <span class="like-count small">{{ event.likes.count|default:0 }}</span>
+        </button>
+
+
+        <button class="btn btn-sm btn-link text-muted share-event-btn"
+                data-event-id="{{ event.id }}"
+                title="Chia sẻ sự kiện">
+            <i class="fas fa-share"></i>
+        </button>
+    </div>
+</div>

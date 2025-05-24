@@ -1,0 +1,145 @@
+{% extends "core/base.html" %}
+{% load static %}
+
+{% block title %}Thêm Moderator - DUE Network{% endblock %}
+
+{% block content %}
+<style>
+    .add-mod-page-wrapper {
+        background-color: #f8f9fa;
+        padding: 1.5rem;
+        min-height: calc(100vh - 56px); /* Điều chỉnh nếu navbar có chiều cao khác */
+    }
+    .add-mod-card {
+        background-color: #ffffff;
+        padding: 2rem;
+        border-radius: 0.5rem;
+        box-shadow: 0 0.5rem 1rem rgba(0,0,0,.15);
+    }
+    .user-select-item {
+        display: flex;
+        align-items: center;
+        padding: 0.75rem 1rem;
+        border: 1px solid #e9ecef;
+        border-radius: 0.375rem;
+        margin-bottom: 0.5rem;
+        transition: background-color 0.15s ease-in-out;
+    }
+    .user-select-item:hover {
+        background-color: #f1f3f5;
+    }
+    .user-select-item img {
+        width: 40px;
+        height: 40px;
+        object-fit: cover;
+        border-radius: 50%;
+        margin-right: 1rem;
+    }
+    .user-select-item .form-check-input {
+        margin-top: 0; /* Căn chỉnh radio button */
+        transform: scale(1.2);
+        margin-right: 0.75rem;
+    }
+</style>
+
+<div class="add-mod-page-wrapper">
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-lg-8">
+                <div class="add-mod-card">
+                    <div class="text-center mb-4">
+                        <i class="fas fa-user-shield fa-3x text-info mb-2"></i>
+                        <h3>Thêm Moderator mới</h3>
+                        <p class="text-muted">Chọn người dùng từ danh sách dưới đây để cấp quyền Moderator.</p>
+                    </div>
+
+                    {% if messages %}
+                        {% for message in messages %}
+                            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                                {{ message }}
+                                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+
+                    <form method="POST" action="{% url 'admin_add_mod' %}" id="addModForm">
+                        {% csrf_token %}
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Chọn người dùng để cấp quyền Mod:</label>
+                            <input type="text" id="userSearchInput" class="form-control form-control-sm mb-2" placeholder="Tìm kiếm người dùng theo tên hoặc username...">
+                            <div id="userListContainer" style="max-height: 400px; overflow-y: auto; border: 1px solid #ced4da; padding: 0.5rem; border-radius: 0.375rem;">
+                                {% if users_to_select %}
+                                    {% for user_select in users_to_select %}
+                                    <div class="user-select-item-wrapper">
+                                        <label for="user_{{ user_select.id }}" class="user-select-item w-100">
+                                            <input class="form-check-input" type="radio" name="user_id" id="user_{{ user_select.id }}" value="{{ user_select.id }}" required>
+                                            <img src="{{ user_select.profile.avatar.url }}" alt="{{ user_select.username }}">
+                                            <div class="user-info">
+                                                <strong class="d-block">{{ user_select.get_full_name|default:user_select.username }}</strong>
+                                                <small class="text-muted">@{{ user_select.username }} - {{ user_select.email }}</small>
+                                            </div>
+                                        </label>
+                                    </div>
+                                    {% endfor %}
+                                {% else %}
+                                    <p class="text-muted text-center py-3">Không có người dùng nào đủ điều kiện để cấp quyền Mod (ví dụ: tất cả đã là Mod/Admin hoặc không có user thường).</p>
+                                {% endif %}
+                            </div>
+                            <small class="form-text text-muted">Chỉ những người dùng thường (role 'user') mới được hiển thị ở đây.</small>
+                        </div>
+
+                        <div class="d-grid gap-2 d-md-flex justify-content-md-end mt-4">
+                            <a href="{% url 'admin_dashboard' %}" class="btn btn-outline-secondary">Hủy</a> {# Hoặc link đến trang quản lý user #}
+                            <button type="submit" class="btn btn-info" {% if not users_to_select %}disabled{% endif %}>
+                                <i class="fas fa-user-plus me-1"></i> Cấp quyền Mod
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+    {{ block.super }}
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const userSearchInput = document.getElementById('userSearchInput');
+        const userListContainer = document.getElementById('userListContainer');
+        const userItems = userListContainer.querySelectorAll('.user-select-item-wrapper');
+
+        if (userSearchInput) {
+            userSearchInput.addEventListener('keyup', function() {
+                const searchTerm = this.value.toLowerCase().trim();
+                userItems.forEach(item => {
+                    const userInfo = item.querySelector('.user-info').textContent.toLowerCase();
+                    if (userInfo.includes(searchTerm)) {
+                        item.style.display = '';
+                    } else {
+                        item.style.display = 'none';
+                    }
+                });
+            });
+        }
+
+        // Xác nhận trước khi submit
+        const addModForm = document.getElementById('addModForm');
+        if (addModForm) {
+            addModForm.addEventListener('submit', function(event) {
+                const selectedUserRadio = this.querySelector('input[name="user_id"]:checked');
+                if (!selectedUserRadio) {
+                    alert("Vui lòng chọn một người dùng để cấp quyền Mod.");
+                    event.preventDefault();
+                    return;
+                }
+                const selectedUserLabel = document.querySelector(`label[for="${selectedUserRadio.id}"] .user-info strong`).textContent;
+                if (!confirm(`Bạn có chắc chắn muốn cấp quyền Moderator cho người dùng "${selectedUserLabel}" không?`)) {
+                    event.preventDefault();
+                }
+            });
+        }
+    });
+    </script>
+{% endblock %}

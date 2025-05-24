@@ -1,0 +1,150 @@
+{% extends "core/base.html" %}
+{% load static %}
+{% load humanize %}
+
+{% block title %}Xử lý Báo cáo Vi phạm - DUE Network{% endblock %}
+
+{% block content %}
+<style>
+    .reported-posts-page-wrapper {
+        background-color: #f8f9fa;
+        padding: 1.5rem;
+        min-height: calc(100vh - 56px);
+    }
+    .report-card {
+        border-left: 5px solid #dc3545;
+    }
+    .report-card .card-header {
+        background-color: rgba(220, 53, 69, 0.1);
+    }
+    .post-preview img {
+        max-width: 100px;
+        max-height: 100px;
+        object-fit: cover;
+        border-radius: 0.25rem;
+    }
+    .actions-dropdown .dropdown-menu {
+        min-width: 10rem;
+    }
+</style>
+
+<div class="reported-posts-page-wrapper">
+    <div class="container-fluid">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2 class="mb-0"><i class="fas fa-exclamation-triangle text-danger me-2"></i>Bài viết bị báo cáo</h2>
+            {# Có thể thêm bộ lọc hoặc sắp xếp ở đây nếu cần #}
+        </div>
+
+        {% if messages %}
+            {% for message in messages %}
+                <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            {% endfor %}
+        {% endif %}
+
+        {% if reports %}
+            <div class="row">
+                {% for report in reports %}
+                <div class="col-md-12 mb-3">
+                    <div class="card report-card shadow-sm" id="report-{{ report.id }}">
+                        <div class="card-header d-flex justify-content-between align-items-center py-2">
+                            <div>
+                                <strong class="text-danger">Lý do báo cáo: {{ report.get_reason_display }}</strong><br>
+                                <small class="text-muted">
+                                    Báo cáo bởi: <a href="{% url 'profile' report.reporter.username %}">@{{ report.reporter.username }}</a> - {{ report.created_at|naturaltime }}
+                                </small>
+                            </div>
+                            <div class="actions-dropdown">
+                                <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" id="actionsDropdown-{{ report.id }}" data-bs-toggle="dropdown" aria-expanded="false">
+                                    Hành động
+                                </button>
+                                <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="actionsDropdown-{{ report.id }}">
+                                    <li>
+                                        <form action="{% url 'resolve_report' report.id %}" method="POST" class="resolve-report-form" onsubmit="return confirmAction(this, 'Xóa bài viết này và đánh dấu báo cáo đã xử lý?');">
+                                            {% csrf_token %}
+                                            <input type="hidden" name="action" value="delete_post">
+                                            <button type="submit" class="dropdown-item text-danger"><i class="fas fa-trash-alt me-2"></i>Xóa bài viết</button> {# [cite: 46] #}
+                                        </form>
+                                    </li>
+                                    <li>
+                                        <form action="{% url 'resolve_report' report.id %}" method="POST" class="resolve-report-form" onsubmit="return confirmAction(this, 'Xóa người dùng đăng bài này và đánh dấu báo cáo đã xử lý? CẢNH BÁO: Hành động này không thể hoàn tác!');">
+                                            {% csrf_token %}
+                                            <input type="hidden" name="action" value="delete_user">
+                                            <button type="submit" class="dropdown-item text-danger fw-bold"><i class="fas fa-user-slash me-2"></i>Xóa người dùng</button> {# [cite: 46] #}
+                                        </form>
+                                    </li>
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li>
+                                        <form action="{% url 'resolve_report' report.id %}" method="POST" class="resolve-report-form" onsubmit="return confirmAction(this, 'Bỏ qua báo cáo này và đánh dấu đã xử lý?');">
+                                            {% csrf_token %}
+                                            <input type="hidden" name="action" value="dismiss_report">
+                                            <button type="submit" class="dropdown-item"><i class="fas fa-check me-2"></i>Bỏ qua báo cáo</button>
+                                        </form>
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            {% if report.reason == 'other' and report.description %}
+                            <div class="alert alert-warning py-2 px-3 small">
+                                <strong>Mô tả thêm từ người báo cáo:</strong><br>
+                                {{ report.description|linebreaksbr }}
+                            </div>
+                            {% endif %}
+
+                            <h5 class="card-title mb-1">
+                                Bài viết: <a href="{% url 'post_detail' report.post.id %}" target="_blank">"{{ report.post.title }}"</a>
+                            </h5>
+                            <p class="card-text mb-1">
+                                <small class="text-muted">
+                                    Đăng bởi: <a href="{% url 'profile' report.post.author.username %}">@{{ report.post.author.username }}</a>
+                                    - {{ report.post.created_at|naturaltime }}
+                                </small>
+                            </p>
+
+                            <div class="post-preview d-flex align-items-start bg-light p-2 rounded border">
+                                {% if report.post.image %}
+                                <img src="{{ report.post.image.url }}" alt="Ảnh bài viết" class="me-2">
+                                {% endif %}
+                                <div class="flex-grow-1">
+                                    <p class="mb-0 small">{{ report.post.content|truncatewords_html:40 }}</p>
+                                </div>
+                            </div>
+
+                            {% if report.post.file_attachment %}
+                            <div class="mt-2 small">
+                                <i class="fas fa-paperclip"></i> File đính kèm:
+                                <a href="{{ report.post.file_attachment.url }}" target="_blank">
+                                    {{ report.post.file_attachment.name|cut:"post_files/" }}
+                                </a>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="text-center py-5">
+                <i class="fas fa-check-circle fa-4x text-success mb-3"></i>
+                <h4>Không có báo cáo nào cần xử lý!</h4>
+                <p class="text-muted">Mọi thứ đều trong tầm kiểm soát.</p>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+    {{ block.super }}
+    <script>
+    function confirmAction(form, message) {
+        if (confirm(message)) {
+            return true;
+        }
+        return false;
+    }
+    </script>
+{% endblock %}

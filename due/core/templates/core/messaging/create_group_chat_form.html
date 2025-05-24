@@ -1,0 +1,86 @@
+{% load static %}
+{% load crispy_forms_tags %} {# Nếu bạn dùng crispy_forms cho form này #}
+
+<div class="modal-header">
+    <h5 class="modal-title" id="createGroupChatModalLabel">
+        <i class="fas fa-users-cog me-2"></i>Tạo nhóm chat mới
+    </h5>
+    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+</div>
+
+<form method="POST" action="{% url 'mod_create_group_chat' %}" id="createGroupChatActualForm">
+    {% csrf_token %}
+    <div class="modal-body" style="max-height: 70vh; overflow-y: auto;">
+        <p class="text-muted small">Chỉ Mod và Admin mới có thể tạo nhóm chat chung.</p>
+
+        {# Nếu không dùng crispy_forms, render thủ công: #}
+        {#
+        <div class="mb-3">
+            <label for="{{ form.name.id_for_label }}" class="form-label">{{ form.name.label }}*</label>
+            {{ form.name }}
+            {% if form.name.errors %}<div class="invalid-feedback d-block">{% for error in form.name.errors %}{{ error }}{% endfor %}</div>{% endif %}
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label">{{ form.members.label }}*</label>
+            <input type="text" id="memberSearchInput" class="form-control form-control-sm mb-2" placeholder="Tìm kiếm để thêm thành viên...">
+            <div class="members-checkbox-list border rounded p-2" style="max-height: 200px; overflow-y: auto;">
+                {% for choice in form.members %}
+                    <div class="form-check user-choice-item">
+                        {{ choice.tag }} {# Render input checkbox #}
+                        <label class="form-check-label" for="{{ choice.id_for_label }}">
+                            <img src="{{ choice.instance.profile.avatar.url }}" alt="{{ choice.instance.username }}" class="rounded-circle me-1" width="24" height="24">
+                            {{ choice.choice_label }} (@{{ choice.instance.username }})
+                        </label>
+                    </div>
+                {% endfor %}
+            </div>
+            {% if form.members.help_text %}<small class="form-text text-muted">{{ form.members.help_text|safe }}</small>{% endif %}
+            {% if form.members.errors %}<div class="invalid-feedback d-block">{% for error in form.members.errors %}{{ error }}{% endfor %}</div>{% endif %}
+        </div>
+        #}
+
+        {# Nếu dùng crispy_forms: #}
+        {{ form|crispy }}
+
+    </div>
+
+    <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Hủy</button>
+        <button type="submit" class="btn btn-primary btn-sm">
+            <i class="fas fa-plus-circle me-1"></i>Tạo nhóm
+        </button>
+    </div>
+</form>
+
+<script>
+// Script này nên được đặt trong block extra_scripts của template gọi modal,
+// hoặc trong một file JS chung nếu modal được load động.
+// Nó chỉ chạy khi DOM của modal này được tải.
+(function() {
+    const memberSearchInput = document.getElementById('memberSearchInput');
+    const membersCheckboxList = document.querySelector('.members-checkbox-list');
+
+    if (memberSearchInput && membersCheckboxList) {
+        const userChoiceItems = membersCheckboxList.querySelectorAll('.user-choice-item');
+
+        memberSearchInput.addEventListener('keyup', function() {
+            const searchTerm = this.value.toLowerCase().trim();
+            userChoiceItems.forEach(item => {
+                const labelText = item.querySelector('label').textContent.toLowerCase();
+                if (labelText.includes(searchTerm)) {
+                    item.style.display = '';
+                } else {
+                    item.style.display = 'none';
+                }
+            });
+        });
+    }
+
+    // Nếu bạn không dùng crispy và render thủ công trường members,
+    // Django mặc định widget cho ManyToManyField với CheckboxSelectMultiple
+    // là một list các <ul><li>. Bạn cần style cho nó hoặc tùy chỉnh widget.
+    // Code trên giả định widget được tùy chỉnh để mỗi choice là một div.form-check.
+    // Nếu dùng crispy, nó sẽ render đẹp hơn.
+})();
+</script>

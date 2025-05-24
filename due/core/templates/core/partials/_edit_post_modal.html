@@ -1,0 +1,50 @@
+{% comment %} File: core/templates/core/partials/_edit_post_modal.html {% endcomment %}
+{% load crispy_forms_tags %}
+
+<div class="modal fade" id="editPostModal-{{ post.id }}" tabindex="-1" aria-labelledby="editPostModalLabel-{{ post.id }}" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="editPostModalLabel-{{ post.id }}">Chỉnh sửa bài viết</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <form action="{% url 'edit_post' post.id %}" method="POST" enctype="multipart/form-data">
+          {% csrf_token %}
+          <div class="modal-body">
+              {% if edit_post_form %}
+                  {{ edit_post_form|crispy }}
+              {% else %}
+                  <div class="mb-3">
+                      <label for="title-edit-modal-{{post.id}}" class="form-label">Tiêu đề</label>
+                      <input type="text" class="form-control" id="title-edit-modal-{{post.id}}" name="title" value="{{ post.title }}" required maxlength="300">
+                  </div>
+                  <div class="mb-3">
+                      <label for="content-edit-modal-{{post.id}}" class="form-label">Nội dung</label>
+                      <textarea class="form-control" id="content-edit-modal-{{post.id}}" name="content" rows="5" required>{{ post.content }}</textarea>
+                  </div>
+                  <div class="mb-3">
+                      <label for="image-edit-modal-{{post.id}}" class="form-label">Hình ảnh</label>
+                      {% if post.image %}
+                          <p class="mb-1"><small>Ảnh hiện tại: <a href="{{post.image.url}}" target="_blank">{{ post.image.name|cut:"post_images/"}}</a></small></p>
+                      {% endif %}
+                      <input type="file" class="form-control" id="image-edit-modal-{{post.id}}" name="image" accept="image/*">
+                      <small class="form-text text-muted">Để trống nếu không muốn thay đổi ảnh.</small>
+                  </div>
+                   <div class="mb-3">
+                      <label for="file_attachment-edit-modal-{{post.id}}" class="form-label">File đính kèm</label>
+                      {% if post.file_attachment %}
+                         <p class="mb-1"><small>File hiện tại: <a href="{{post.file_attachment.url}}" target="_blank">{{ post.file_attachment.name|cut:"post_files/"}}</a></small></p>
+                      {% endif %}
+                      <input type="file" class="form-control" id="file_attachment-edit-modal-{{post.id}}" name="file_attachment">
+                      <small class="form-text text-muted">Để trống nếu không muốn thay đổi file đính kèm. File dưới 100MB.</small>
+                  </div>
+              {% endif %}
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+            <button type="submit" class="btn btn-primary">Lưu thay đổi</button>
+          </div>
+      </form>
+    </div>
+  </div>
+</div>

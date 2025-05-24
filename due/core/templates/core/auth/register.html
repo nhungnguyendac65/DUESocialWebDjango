@@ -1,0 +1,126 @@
+{% extends "core/base.html" %}
+{% load static %}
+{% load crispy_forms_tags %} {# Nếu bạn dùng crispy_forms #}
+
+{% block title %}Đăng ký tài khoản - DUE Network{% endblock %}
+
+{% block extra_head %}
+<style>
+    .toolbar { display: none !important; }
+    .main-content { margin-left: 0 !important; width: 100% !important; padding-top: 0 !important; height: 100vh; display: flex; }
+    .app-navbar { display: none !important; }
+    body { background-color: #eef2f7; }
+
+    .register-page-wrapper { display: flex; width: 100%; min-height: 100vh; align-items: stretch; }
+    .register-form-section { width: 100%; max-width: 520px; /* Rộng hơn một chút cho nhiều trường hơn */ margin: auto; padding: 2.5rem; background-color: #ffffff; border-radius: 0.75rem; box-shadow: 0 8px 30px rgba(0,0,0,0.1); display: flex; flex-direction: column; justify-content: center; }
+    .register-background-section { flex-grow: 1; background-color: #CFE2F3; color: #00095E; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 40px; text-align: center; }
+    .register-background-section h1 { font-size: 2.8rem; font-weight: 700; color: #00095E; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 1rem; }
+    .register-background-section p { font-size: 1.05rem; color: #001f3f; line-height: 1.6; }
+    .register-background-section .logo-bg { max-width: 120px; margin-bottom: 1.5rem; }
+
+    .register-form-section .form-label { display: block; margin-bottom: 0.5rem; font-weight: 500; color: #495057; }
+    .register-form-section .form-control,
+    .register-form-section .input-group .form-control,
+    .register-form-section .form-select {
+        padding: 0.85rem 1.1rem; border-radius: 0.375rem; border: 1px solid #ced4da; font-size: 0.95rem;
+        height: calc(1.5em + 1.7rem + 2px); /* Đồng bộ chiều cao */
+    }
+    .register-form-section .input-group .form-control { border-top-right-radius: 0; border-bottom-right-radius: 0;}
+    .register-form-section .input-group .btn { border-top-left-radius: 0; border-bottom-left-radius: 0; border-color: #ced4da; height: calc(1.5em + 1.7rem + 2px);}
+    .register-form-section .form-control:focus, .register-form-section .form-select:focus { border-color: #00095E; box-shadow: 0 0 0 0.25rem rgba(0, 9, 94, 0.25); }
+    .register-form-section .btn-primary { background-color: #00095E; border-color: #00095E; padding: 0.75rem 1rem; border-radius: 0.375rem; font-weight: 500; text-transform: uppercase; letter-spacing: 0.05em; }
+    .register-form-section .btn-primary:hover { background-color: #001f3f; border-color: #001f3f; }
+    .register-form-section .btn-outline-primary { color: #00095E; border-color: #00095E; padding: 0.75rem 1rem; border-radius: 0.375rem; font-weight: 500; }
+    .register-form-section .btn-outline-primary:hover { background-color: #00095E; color: #fff; }
+    .register-form-section .form-text { font-size: 0.8rem; } /* Help text nhỏ hơn */
+    .register-form-section .small-text-link { font-size: 0.9rem; color: #00095E; }
+    .register-form-section .small-text-link:hover { color: #001f3f; }
+
+
+    @media (min-width: 992px) { /* Layout 2 cột cho màn hình lớn */
+        .register-form-section { width: 45%; max-width: 520px; margin: 0; border-top-right-radius: 0; border-bottom-right-radius: 0; box-shadow: -5px 0 20px rgba(0,0,0,0.07); }
+        .register-background-section { width: 55%; display: flex !important; }
+    }
+    @media (max-width: 991.98px) { /* Layout 1 cột cho màn hình nhỏ */
+        .register-background-section { display: none !important; }
+        .register-page-wrapper { background-color: #eef2f7; padding: 1rem; }
+        .register-form-section { margin: auto; max-width: 500px; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="register-page-wrapper">
+    <div class="register-form-section">
+        <div class="text-center mb-4">
+            <img src="{% static 'core/images/due_network_logo_main.png' %}" alt="DUE Network Logo" style="max-width: 160px; margin-bottom:0.5rem;">
+            <h2 class="mt-2 mb-1 fw-bold" style="color: #00095E;">Tạo tài khoản</h2>
+            <p class="text-muted small">Tham gia cộng đồng DUE Network ngay hôm nay!</p>
+        </div>
+
+        {% if messages %}
+            {% for message in messages %}
+                <div class="alert alert-{{ message.tags|lower }} alert-dismissible fade show py-2 small" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close btn-sm" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            {% endfor %}
+        {% endif %}
+
+        <form method="POST" action="{% url 'register' %}">
+            {% csrf_token %}
+            {{ form|crispy }}
+
+            <button type="submit" class="btn btn-primary w-100 py-2 mb-3 mt-3">Đăng ký</button>
+
+            <div class="text-center">
+                <p class="text-muted mb-1 small">Đã có tài khoản?</p>
+                <a href="{% url 'login' %}" class="btn btn-outline-primary w-100 py-2">Đăng nhập ngay</a>
+            </div>
+        </form>
+    </div>
+
+    <div class="register-background-section">
+        <img src="{% static 'core/images/due_network_logo_main.png' %}" alt="DUE Network" class="logo-bg">
+        <h1>DUE NETWORK</h1>
+        <p>Mở rộng kết nối, nắm bắt cơ hội,<br>cùng xây dựng cộng đồng sinh viên vững mạnh!</p>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        document.querySelectorAll('.toggle-password-btn').forEach(button => {
+            button.addEventListener('click', function () {
+                const targetInputId = this.dataset.target;
+                const passwordInput = document.getElementById(targetInputId);
+                const icon = this.querySelector('i');
+                if (passwordInput) {
+                    const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+                    passwordInput.setAttribute('type', type);
+                    icon.classList.toggle('fa-eye');
+                    icon.classList.toggle('fa-eye-slash');
+                }
+            });
+        });
+
+        const fieldsToStyle = ['username', 'email', 'phone_number', 'password1', 'password2'];
+        fieldsToStyle.forEach(fieldName => {
+            const field = document.getElementById(`id_${fieldName}`);
+            if (field) {
+                if (!field.classList.contains('form-control')) {
+                    field.classList.add('form-control');
+                }
+                }
+            }
+        });
+        if (document.getElementById('id_username') && !document.getElementById('id_username').placeholder) document.getElementById('id_username').placeholder = 'Tên đăng nhập (dưới 20 ký tự)';
+        if (document.getElementById('id_email') && !document.getElementById('id_email').placeholder) document.getElementById('id_email').placeholder = 'email@due.udn.vn';
+        if (document.getElementById('id_phone_number') && !document.getElementById('id_phone_number').placeholder) document.getElementById('id_phone_number').placeholder = 'Số điện thoại (không bắt buộc)';
+        if (document.getElementById('id_password1') && !document.getElementById('id_password1').placeholder) document.getElementById('id_password1').placeholder = 'Mật khẩu (ít nhất 8 ký tự)';
+        if (document.getElementById('id_password2') && !document.getElementById('id_password2').placeholder) document.getElementById('id_password2').placeholder = 'Xác nhận lại mật khẩu';
+
+    });
+    </script>
+{% endblock %}

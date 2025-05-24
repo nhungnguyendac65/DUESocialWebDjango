@@ -1,0 +1,46 @@
+{% extends "core/base.html" %}
+{% load static %}
+{% block title %}Trang chủ - DUE Network{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-8 mx-auto">
+        <div class="card mb-3">
+            <div class="card-body">
+                 <div class="d-flex align-items-center">
+                    <img src="{{ user.profile.avatar.url }}" alt="{{ user.username }}" class="rounded-circle me-2" width="40" height="40">
+                    <button type="button" class="form-control text-start text-muted" data-bs-toggle="modal" data-bs-target="#createPostModal">
+                        Bạn đang nghĩ gì, {{ user.first_name|default:user.username }}?
+                    </button>
+                </div>
+            </div>
+        </div>
+        {% include "core/partials/_create_post_modal.html" %}
+
+
+        <div id="post-list">
+            {% for p_item_loopvar in posts %}
+            {% include "core/partials/_post_card.html" with post=p_item_loopvar edit_post_form_for_this_card=p_item_loopvar.edit_form_instance %}
+            {% empty %}
+                <p class="text-center text-muted">Chưa có bài viết nào. Hãy là người đầu tiên!</p>
+            {% endfor %}
+        </div>
+        </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="{% static 'core/js/post_interactions.js' %}"></script>
+<script>
+// Script cho modal đăng bài (nếu cần xử lý AJAX)
+// Script cho "Xem thêm" (nếu cần)
+// Script cho infinite scroll (nếu cần)
+document.addEventListener('DOMContentLoaded', function () {
+    // Kích hoạt tooltips
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl)
+    })
+});
+</script>
+{% endblock %}

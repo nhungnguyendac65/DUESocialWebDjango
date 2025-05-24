@@ -1,0 +1,216 @@
+{% load static %}
+{% load humanize %}
+
+<div class="card post-card {% if not remove_outer_margin %}mb-3{% endif %}"
+     id="post-{% if is_shared_on_profile and original_sharer_post %}{{original_sharer_post.id}}-content-{% if post.shared_from_post %}{{post.shared_from_post.id}}{% elif post.shared_event %}{{post.shared_event.id}}{% endif %}{% else %}{{post.id}}{% endif %}">
+    <div class="card-body">
+        <div class="d-flex align-items-center mb-2">
+            <a href="{% url 'profile' post.author.username %}">
+                {% if post.author.profile and post.author.profile.avatar and post.author.profile.avatar.name %}
+                    <img src="{{ post.author.profile.avatar.url }}" alt="{{ post.author.username }}" class="rounded-circle me-2" width="40" height="40" style="object-fit: cover;">
+                {% else %}
+                    <img src="{% static 'core/images/default_placeholder_avatar.png' %}" alt="{{ post.author.username }}" class="rounded-circle me-2" width="40" height="40" style="object-fit: cover;">
+                {% endif %}
+            </a>
+            <div>
+                <a href="{% url 'profile' post.author.username %}" class="text-decoration-none text-dark">
+                    <strong class="d-block">{{ post.author.get_full_name|default:post.author.username }}</strong>
+                </a>
+                {% if post.shared_from_post %}
+                    <small class="text-muted">đã chia sẻ một bài viết &bull; {{ post.created_at|naturaltime }}</small>
+                {% elif post.shared_event %}
+                    <small class="text-muted">đã chia sẻ một sự kiện &bull; {{ post.created_at|naturaltime }}</small>
+                {% else %}
+                    <small class="text-muted">@{{ post.author.username }} &bull; {{ post.created_at|naturaltime }}</small>
+                {% endif %}
+            </div>
+
+            {% if user.is_authenticated %}
+            <div class="ms-auto dropdown">
+                <button class="btn btn-link text-muted py-0 px-1" type="button" id="postCardDropdownMenu-{{ post.id }}" data-bs-toggle="dropdown" aria-expanded="false">
+                    <i class="fas fa-ellipsis-h"></i>
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end shadow border-0" aria-labelledby="postCardDropdownMenu-{{ post.id }}">
+                    {% if post.author == request.user %}
+                        {# Current user is the author of THIS Post object #}
+                        {% if not post.shared_from_post and not post.shared_event %}
+                            {# This is an ORIGINAL post by the current user #}
+                            <li><a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#editPostModal-{{ post.id }}"><i class="fas fa-edit fa-fw me-2"></i>Sửa bài viết</a></li>
+                        {% endif %}
+                        <li>
+                            <form action="{% url 'delete_post' post.id %}" method="POST" onsubmit="return confirm('Bạn có chắc chắn muốn xóa mục này khỏi trang cá nhân?');" class="d-inline">
+                                {% csrf_token %}
+                                <button type="submit" class="dropdown-item text-danger"><i class="fas fa-trash-alt fa-fw me-2"></i>Xoá mục này</button>
+                            </form>
+                        </li>
+                    {% else %}
+                        <li><a class="dropdown-item" href="{% url 'report_post' post.id %}"><i class="fas fa-flag fa-fw me-2"></i>Báo cáo bài viết</a></li>
+                    {% endif %}
+
+                    {% if request.user.is_authenticated %}
+                        {# Chỉ Admin hoặc Superuser mới có thêm quyền xóa bài của người khác từ menu này #}
+                        {% if request.user.role == 'admin' or request.user.is_superuser %}
+                            {% if post.author != request.user %}
+                                {% if not is_shared_on_profile %} {# Chỉ áp dụng cho card chính, không phải card content được nhúng #}
+                                    <li><hr class="dropdown-divider my-1"></li>
+                                    <li>
+                                        <form action="{% url 'delete_post' post.id %}" method="POST" onsubmit="return confirm('Bạn (Admin) có chắc chắn muốn xóa mục này của @{{post.author.username}}?');" class="d-inline">
+                                            {% csrf_token %}
+                                            <button type="submit" class="dropdown-item text-danger"><i class="fas fa-user-shield fa-fw me-2"></i>Xoá bài viết</button>
+                                        </form>
+                                    </li>
+                                {% endif %}
+                            {% endif %}
+                        {% endif %}
+                    {% endif %}
+                </ul>
+            </div>
+            {% endif %}
+        </div>
+
+        {% comment %}
+        {% if post.shared_from_post or post.shared_event %}
+        {% if post.content %}
+        <p class="card-text mb-2 fst-italic">{{ post.content|linebreaksbr }}</p>
+        {% endif %}
+        <p class="card-text mb-2 fst-italic">{{ post.content|linebreaksbr }}</p> <-- Dòng này thừa và làm hỏng if
+        {% endif %}
+        {% endcomment %}
+
+        {# SỬA LẠI LOGIC HIỂN THỊ LỜI DẪN CỦA NGƯỜI SHARE #}
+        {% if post.shared_from_post or post.shared_event %}
+            {# Chỉ hiển thị content của Post này (lời dẫn) nếu nó thực sự có content #}
+            {% if post.content %}
+                <p class="card-text mb-2 fst-italic">{{ post.content|linebreaksbr }}</p>
+            {% endif %}
+        {% endif %}
+
+
+        {% if post.shared_from_post %}
+            {% with original_post=post.shared_from_post %}
+                <div class="border p-2 mb-2 rounded bg-light-subtle shared-content-preview">
+                    {# ... (HTML to display original_post - title, content snippet, image, author) ... #}
+                    <div class="d-flex align-items-center mb-2">
+                        <a href="{% url 'profile' original_post.author.username %}">
+                             {% if original_post.author.profile and original_post.author.profile.avatar and original_post.author.profile.avatar.name %}
+                                <img src="{{ original_post.author.profile.avatar.url }}" alt="{{ original_post.author.username }}" class="rounded-circle me-2" width="30" height="30" style="object-fit: cover;">
+                            {% else %}
+                                <img src="{% static 'core/images/default_placeholder_avatar.png' %}" alt="{{ original_post.author.username }}" class="rounded-circle me-2" width="30" height="30" style="object-fit: cover;">
+                            {% endif %}
+                        </a>
+                        <div>
+                            <a href="{% url 'profile' original_post.author.username %}" class="text-decoration-none text-dark">
+                                <strong class="d-block">{{ original_post.author.get_full_name|default:original_post.author.username }}</strong>
+                            </a>
+                            <small class="text-muted">@{{ original_post.author.username }} &bull; {{ original_post.created_at|naturaltime }}</small>
+                        </div>
+                    </div>
+                    <h5><a href="{% url 'post_detail' original_post.id %}" class="text-decoration-none">{{ original_post.title_or_default }}</a></h5>
+                    {% if original_post.content %}
+                    <p class="card-text text-truncate-line-3">{{ original_post.content|truncatewords_html:30|linebreaksbr }}</p>
+                    {% endif %}
+                    {% if original_post.image %}
+                        <img src="{{ original_post.image.url }}" class="img-fluid rounded mb-2" alt="Post image">
+                    {% endif %}
+                    {% if original_post.file_attachment %}
+                    <div class="mt-1"><a href="{{ original_post.file_attachment.url }}" target="_blank" class="btn btn-sm btn-outline-secondary py-0 px-1" style="font-size:0.8em;"><i class="fas fa-paperclip"></i> {{original_post.file_attachment.name|cut:"post_files/"|truncatechars:20}}</a></div>
+                    {% endif %}
+                </div>
+            {% endwith %}
+        {% elif post.shared_event %}
+            {% with original_event=post.shared_event %}
+            <div class="border p-2 mb-2 rounded bg-light-subtle shared-content-preview">
+                <div class="d-flex align-items-center mb-2">
+                     <a href="{% if original_event.creator %}{% url 'profile' original_event.creator.username %}{% else %}#{% endif %}">
+                         {% if original_event.creator.profile and original_event.creator.profile.avatar and original_event.creator.profile.avatar.name %}
+                            <img src="{{ original_event.creator.profile.avatar.url }}" alt="{{ original_event.creator.username|default:'User' }}" class="rounded-circle me-2" width="30" height="30" style="object-fit: cover;">
+                        {% else %}
+                            <img src="{% static 'core/images/default_placeholder_avatar.png' %}" alt="User" class="rounded-circle me-2" width="30" height="30" style="object-fit: cover;">
+                        {% endif %}
+                    </a>
+                    <div>
+                        <a href="{% if original_event.creator %}{% url 'profile' original_event.creator.username %}{% else %}#{% endif %}" class="text-decoration-none text-dark">
+                            <strong class="d-block">Sự kiện bởi: {{ original_event.creator.get_full_name|default:original_event.creator.username }}</strong>
+                        </a>
+                        <small class="text-muted">@{{ original_event.creator.username|default:'unknown' }} &bull; {{ original_event.created_at|naturaltime }}</small>
+                    </div>
+                </div>
+                <h5><a href="{% url 'event_detail' original_event.id %}" class="text-decoration-none"><i class="fas fa-calendar-alt text-primary me-1"></i>{{ original_event.title }}</a></h5>
+                <p class="card-text text-truncate-line-3">{{ original_event.content|truncatewords_html:30|linebreaksbr }}</p>
+                {% if original_event.image %}
+                    <img src="{{ original_event.image.url }}" class="img-fluid rounded mb-2" alt="Event image">
+                {% endif %}
+                {% if original_event.tags.all %}
+                    <div class="mt-1">
+                    {% for tag in original_event.tags.all|slice:":2" %}
+                        <span class="badge bg-secondary me-1" style="font-size:0.7em;">{{ tag.name }}</span>
+                    {% endfor %}
+                    </div>
+                {% endif %}
+            </div>
+            {% endwith %}
+        {% else %}
+            <h5><a href="{% url 'post_detail' post.id %}" class="text-decoration-none">{{ post.title_or_default }}</a></h5>
+            {% if post.content %}
+            <div class="d-flex">
+                {% if post.image %}
+                <div class="flex-shrink-0 me-3 mb-2" style="width: 120px; height: 120px; overflow: hidden;">
+                    <img src="{{ post.image.url }}" class="img-fluid rounded w-100 h-100" alt="Post image" style="object-fit: cover;">
+                </div>
+                {% endif %}
+                <div class="flex-grow-1">
+                    <p class="card-text text-truncate-line-3">{{ post.content|truncatewords_html:40|linebreaksbr }}
+                        {% if post.content|wordcount > 40 %}
+                            <a href="{% url 'post_detail' post.id %}" class="text-decoration-none small">Xem thêm...</a>
+                        {% endif %}
+                    </p>
+                </div>
+            </div>
+            {% elif post.image %} {# If no content but has image (image-only post) #}
+             <div class="text-center"> {# Center image if no content #}
+                <img src="{{ post.image.url }}" class="img-fluid rounded mb-2" alt="Post image" style="max-height: 400px;">
+            </div>
+            {% endif %}
+
+            {% if post.file_attachment %}
+            <div class="mt-2">
+                <a href="{{ post.file_attachment.url }}" target="_blank" class="btn btn-sm btn-outline-secondary">
+                    <i class="fas fa-paperclip"></i> {{ post.file_attachment.name|cut:"post_files/"|truncatechars:25 }}
+                </a>
+            </div>
+            {% endif %}
+        {% endif %} {# Kết thúc khối if is_shared_on_profile (nếu có) hoặc khối if post.shared_from_post/post.shared_event #}
+    </div>
+
+    {% if not is_shared_on_profile %}
+    <div class="card-footer bg-transparent d-flex justify-content-around py-1">
+        <button class="btn btn-sm btn-link text-muted like-btn {% if post.is_liked_by_user %}text-danger{% endif %}" data-post-id="{{ post.id }}">
+            <i class="fa-heart {% if post.is_liked_by_user %}fas text-danger{% else %}far{% endif %}"></i>
+            <span class="like-count small">{{ post.likes.count|default:0 }}</span> Thích
+        </button>
+        <a href="{% url 'post_detail' post.id %}#comments-section-{{post.id}}" class="btn btn-sm btn-link text-muted">
+            <i class="far fa-comment"></i>
+            <span class="small">{{ post.comments_on_post.count|default:0 }}</span> Bình luận
+        </a>
+
+        {% if post.shared_event %}
+            <button class="btn btn-sm btn-link text-muted share-event-btn" data-event-id="{{ post.shared_event.id }}">
+                <i class="fas fa-share"></i> Chia sẻ
+            </button>
+        {% else %}
+            <button class="btn btn-sm btn-link text-muted share-btn" data-post-id="{{ post.shared_from_post.id|default:post.id }}">
+                <i class="fas fa-share"></i> Chia sẻ
+            </button>
+        {% endif %}
+
+        <button class="btn btn-sm btn-link text-muted bookmark-btn {% if post.is_bookmarked_by_user %}text-primary-custom{% endif %}" data-post-id="{{ post.id }}">
+            <i class="fa-bookmark {% if post.is_bookmarked_by_user %}fas{% else %}far{% endif %}"></i> Lưu
+        </button>
+    </div>
+    {% endif %} {# Kết thúc if not is_shared_on_profile #}
+</div>
+
+{% if post.author == request.user and not post.shared_from_post and not post.shared_event and edit_post_form_for_this_card %}
+
+    {% include "core/partials/_edit_post_modal.html" with post=post post_form=edit_post_form_for_this_card %}
+{% endif %}
