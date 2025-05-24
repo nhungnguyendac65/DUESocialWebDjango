@@ -19,8 +19,8 @@
 
 
         <div id="post-list">
-            {% for post in posts %}
-                {% include "core/partials/_post_card.html" with post=post %}
+            {% for p_item_loopvar in posts %}
+            {% include "core/partials/_post_card.html" with post=p_item_loopvar edit_post_form_for_this_card=p_item_loopvar.edit_form_instance %}
             {% empty %}
                 <p class="text-center text-muted">Chưa có bài viết nào. Hãy là người đầu tiên!</p>
             {% endfor %}

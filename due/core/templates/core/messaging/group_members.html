@@ -1,3 +1,4 @@
+{% comment %} File: core/templates/core/messaging/group_members.html {% endcomment %}
 {% load static %}
 
 <div class="modal-header">
@@ -11,30 +12,34 @@
     {% if group.members.all %}
         <p class="text-muted small">{{ group.members.count }} thành viên</p>
         <ul class="list-group list-group-flush">
-            {% for member in group.members.all %}
+            {% for member_item_loopvar in group.members.all %}
             <li class="list-group-item px-0 py-2">
                 <div class="d-flex justify-content-between align-items-center">
-                    <a href="{% url 'profile' member.username %}" class="text-decoration-none text-dark d-flex align-items-center">
-                        <img src="{{ member.profile.avatar.url }}" alt="{{ member.username }}" class="rounded-circle me-3" width="45" height="45" style="object-fit: cover;">
+                    <a href="{% url 'profile' member_item_loopvar.username %}" class="text-decoration-none text-dark d-flex align-items-center">
+                        {% if member_item_loopvar.profile and member_item_loopvar.profile.avatar and member_item_loopvar.profile.avatar.name %}
+                            <img src="{{ member_item_loopvar.profile.avatar.url }}" alt="{{ member_item_loopvar.username }}" class="rounded-circle me-3" width="45" height="45" style="object-fit: cover;">
+                        {% else %}
+                            <img src="{% static 'core/images/default_placeholder_avatar.png' %}" alt="{{ member_item_loopvar.username }}" class="rounded-circle me-3" width="45" height="45" style="object-fit: cover;">
+                        {% endif %}
                         <div>
-                            <h6 class="mb-0">{{ member.get_full_name|default:member.username }}</h6>
-                            <small class="text-muted">@{{ member.username }}</small>
+                            <h6 class="mb-0">{{ member_item_loopvar.get_full_name|default:member_item_loopvar.username }}</h6>
+                            <small class="text-muted">@{{ member_item_loopvar.username }}</small>
                         </div>
                     </a>
-                    <div>
-                        {% if member == group.creator %}
-                            <span class="badge bg-success rounded-pill px-2 py-1">Người thành lập nhóm</span> {# [cite: 40] #}
+                    <div class="d-flex align-items-center">
+                        {% if member_item_loopvar == group.creator %}
+                            <span class="badge bg-success rounded-pill px-2 py-1 me-2">Người thành lập</span>
                         {% else %}
-                            <span class="badge bg-secondary rounded-pill px-2 py-1">Thành viên</span> {# [cite: 40] #}
+                            <span class="badge bg-secondary rounded-pill px-2 py-1 me-2">Thành viên</span>
                         {% endif %}
-                        {# Thêm nút Xóa thành viên nếu người xem là creator và member không phải là creator #}
-                        {% if request.user == group.creator and member != group.creator %}
-                            <button class="btn btn-sm btn-outline-danger ms-2 remove-member-btn"
-                                    data-group-id="{{ group.id }}"
-                                    data-member-id="{{ member.id }}"
-                                    title="Xóa thành viên này khỏi nhóm">
-                                <i class="fas fa-user-minus"></i>
-                            </button>
+
+                        {% if request.user == group.creator and member_item_loopvar != group.creator %}
+                            <form action="{% url 'remove_member_from_group' group_id=group.id user_id=member_item_loopvar.id %}" method="POST" class="d-inline" onsubmit="return confirm('Bạn có chắc chắn muốn xóa người dùng {{member_item_loopvar.username}} khỏi nhóm này?');">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-sm btn-outline-danger" title="Xóa {{member_item_loopvar.username}} khỏi nhóm">
+                                    <i class="fas fa-user-minus"></i>
+                                </button>
+                            </form>
                         {% endif %}
                     </div>
                 </div>
@@ -47,13 +52,10 @@
 </div>
 
 <div class="modal-footer">
-    {% if request.user == group.creator %}
-    <button type="button" class="btn btn-outline-primary btn-sm add-members-btn" data-group-id="{{ group.id }}">
+    {% if request.user == group.creator and not group.is_private_chat %}
+    <a href="{% url 'add_members_to_group' group.id %}" class="btn btn-outline-primary btn-sm">
         <i class="fas fa-user-plus"></i> Thêm thành viên
-    </button>
+    </a>
     {% endif %}
     <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Đóng</button>
 </div>
-
-{# Script xử lý xóa thành viên (nếu có) sẽ được đặt ở template cha gọi modal này #}
-{# hoặc bạn có thể đặt event listener chung cho class .remove-member-btn #}

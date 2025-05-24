@@ -15,7 +15,7 @@ document.addEventListener('DOMContentLoaded', function() {
             .then(response => response.json())
             .then(data => {
                 if (data.liked) {
-                    this.classList.add('text-danger'); // Biểu tượng đỏ [cite: 12]
+                    this.classList.add('text-danger');
                     this.querySelector('i').classList.remove('far');
                     this.querySelector('i').classList.add('fas');
                 } else {
@@ -33,7 +33,7 @@ document.addEventListener('DOMContentLoaded', function() {
     document.querySelectorAll('.bookmark-btn').forEach(button => {
         button.addEventListener('click', function() {
             const postId = this.dataset.postId;
-            fetch(`/api/post/${postId}/bookmark/`, { // URL API cho bookmark
+            fetch(`/api/post/${postId}/bookmark/`, {
                 method: 'POST',
                 headers: {
                     'X-CSRFToken': csrftoken,
@@ -44,7 +44,7 @@ document.addEventListener('DOMContentLoaded', function() {
             .then(data => {
                 const icon = this.querySelector('i');
                 if (data.bookmarked) {
-                    this.classList.add('text-primary'); // Hoặc màu đỏ như yêu cầu [cite: 12]
+                    this.classList.add('text-primary');
                     icon.classList.remove('far');
                     icon.classList.add('fas');
                 } else {
@@ -52,23 +52,21 @@ document.addEventListener('DOMContentLoaded', function() {
                     icon.classList.remove('fas');
                     icon.classList.add('far');
                 }
-                // Có thể hiển thị thông báo data.message
-                // alert(data.message); // Hoặc dùng toast bootstrap
             })
             .catch(error => console.error('Error bookmarking post:', error));
         });
     });
 
-    // --- Add Comment (ví dụ cho form comment trong post_detail.html) ---
-    const commentForm = document.getElementById('comment-form'); // Cần đặt ID cho form
+    // --- Add Comment ---
+    const commentForm = document.getElementById('comment-form');
     if (commentForm) {
         commentForm.addEventListener('submit', function(e) {
             e.preventDefault();
-            const postId = this.dataset.postId; // Cần đặt data-post-id cho form
+            const postId = this.dataset.postId;
             const formData = new FormData(this);
             const content = formData.get('content');
 
-            fetch(`/api/post/${postId}/comment/add/`, { // URL API cho add comment
+            fetch(`/api/post/${postId}/comment/add/`, {
                 method: 'POST',
                 headers: {
                     'X-CSRFToken': csrftoken,
@@ -78,9 +76,8 @@ document.addEventListener('DOMContentLoaded', function() {
             })
             .then(response => response.json())
             .then(data => {
-                if (data.id) { // Thành công
-                    // Thêm comment mới vào danh sách comments trên trang mà không cần load lại
-                    const commentsContainer = document.getElementById('comments-list'); // Cần ID cho container
+                if (data.id) {
+                    const commentsContainer = document.getElementById('comments-list');
                     const newCommentHtml = `
                         <div class="d-flex mb-2">
                             <img src="${data.author.avatar || '/static/core/images/default_avatar.png'}" class="rounded-circle me-2" width="30" height="30">
@@ -91,7 +88,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             </div>
                         </div>`;
                     commentsContainer.insertAdjacentHTML('beforeend', newCommentHtml);
-                    this.reset(); // Xóa nội dung form
+                    this.reset();
                 } else {
                     console.error('Error adding comment:', data.errors);
                 }
@@ -105,7 +102,7 @@ document.addEventListener('DOMContentLoaded', function() {
         button.addEventListener('click', function() {
             const postId = this.dataset.postId;
             if (confirm("Bạn có muốn chia sẻ bài viết này về trang cá nhân?")) {
-                fetch(`/post/${postId}/share/`, { // Đây là viewปกติ, không phải API nếu reload
+                fetch(`/post/${postId}/share/`, {
                     method: 'POST',
                     headers: {
                         'X-CSRFToken': csrftoken,
@@ -113,19 +110,12 @@ document.addEventListener('DOMContentLoaded', function() {
                 })
                 .then(response => {
                     if (response.ok) {
-                        // Nếu không dùng AJAX để cập nhật UI ngay, thì server sẽ redirect
-                        // Nếu view trả về JSON:
-                        // return response.json();
-                        alert("Bài viết đã được chia sẻ!"); // Thông báo đơn giản
-                        window.location.reload(); // Hoặc cập nhật UI động
+                        alert("Bài viết đã được chia sẻ!");
+                        window.location.reload();
                     } else {
                         alert("Có lỗi xảy ra khi chia sẻ bài viết.");
                     }
                 })
-                // .then(data => { // Nếu là JSON response
-                //     console.log(data.message);
-                //     // Cập nhật UI nếu cần
-                // })
                 .catch(error => console.error('Error sharing post:', error));
             }
         });
@@ -134,7 +124,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
 });
 
-// Hàm helper để lấy CSRF token
 function getCookie(name) {
     let cookieValue = null;
     if (document.cookie && document.cookie !== '') {

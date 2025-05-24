@@ -1,8 +1,7 @@
 {% load static %}
-{% load humanize %} {# Để dùng naturaltime cho tin nhắn nếu muốn #}
+{% load humanize %}
 
 <div class="chat-header p-3 border-bottom d-flex align-items-center sticky-top bg-light">
-    {# Phần này được giữ lại từ chat_room.html cũ #}
     {% if group.is_private_chat and other_user %}
         <a href="{% url 'profile' other_user.username %}" class="text-decoration-none text-dark d-flex align-items-center">
             <img src="{{ other_user.profile.avatar.url }}" alt="{{ other_user.username }}" class="rounded-circle chat-avatar me-2">
@@ -11,7 +10,7 @@
                 <small class="text-muted">@{{ other_user.username }}</small>
             </div>
         </a>
-    {% elif group %} {# Đảm bảo group tồn tại trước khi truy cập thuộc tính #}
+    {% elif group %}
         <span class="fa-stack fa-lg me-2">
             <i class="fas fa-circle fa-stack-2x text-secondary"></i>
             <i class="fas fa-users fa-stack-1x fa-inverse"></i>
@@ -24,7 +23,7 @@
         <h5 class="mb-0 text-muted">Chọn một cuộc trò chuyện</h5>
     {% endif %}
 
-    {% if group %} {# Chỉ hiển thị dropdown nếu có group được chọn #}
+    {% if group %}
     <div class="dropdown ms-auto">
         <button class="btn btn-link text-muted" type="button" id="chatRoomOptions-{{ group.id }}" data-bs-toggle="dropdown" aria-expanded="false">
             <i class="fas fa-ellipsis-v"></i>
@@ -38,8 +37,8 @@
                         <i class="fas fa-ban fa-fw me-2"></i>{% if is_blocked_by_me %}Bỏ chặn người này{% else %}Chặn người này{% endif %}
                     </button>
                 </li>
-                <li><hr class="dropdown-divider"></li> {# Dòng kẻ phân cách #}
-                <li> {# <<< BẮT ĐẦU THÊM/SỬA Ở ĐÂY CHO CHAT CÁ NHÂN >>> #}
+                <li><hr class="dropdown-divider"></li>
+                <li>
                     <form action="{% url 'leave_group_view' group.id %}" method="POST" onsubmit="return confirm('Bạn có chắc muốn xóa cuộc trò chuyện này khỏi danh sách của bạn không? Tin nhắn sẽ vẫn hiển thị với người kia cho đến khi họ cũng xóa.');" class="d-inline">
                         {% csrf_token %}
                         <button type="submit" class="dropdown-item text-danger">
@@ -50,8 +49,7 @@
             {% elif not group.is_private_chat %} {# Group chat options #}
                 <li><a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#groupMembersModal-{{ group.id }}"><i class="fas fa-users fa-fw me-2"></i>Xem thành viên nhóm</a></li>
                 {% if is_creator %}
-                <li><a class="dropdown-item" href="#"><i class="fas fa-user-plus fa-fw me-2"></i>Thêm thành viên</a></li>
-                <li><a class="dropdown-item" href="#"><i class="fas fa-edit fa-fw me-2"></i>Đổi tên nhóm</a></li>
+                <li><a class="dropdown-item" href="{% url 'add_members_to_group' group.id %}"><i class="fas fa-user-plus fa-fw me-2"></i>Thêm thành viên</a></li>
                 {% endif %}
                 <li><hr class="dropdown-divider"></li>
                 <li>
@@ -110,7 +108,6 @@
             Chưa có tin nhắn nào. Bắt đầu cuộc trò chuyện!
         </p>
     {% else %}
-        {# Phần này sẽ hiển thị nếu không có group nào được chọn (khi message_center.html include nó) #}
         <div class="d-flex flex-column justify-content-center align-items-center h-100 text-center">
             <i class="far fa-comments fa-5x text-muted mb-3"></i>
             <h4>Chọn một cuộc trò chuyện</h4>
@@ -119,7 +116,7 @@
     {% endif %}
 </div>
 
-{% if group %} {# Chỉ hiển thị form nếu có group được chọn #}
+{% if group %}
 <div class="chat-input-area p-3 border-top bg-light">
     <form method="POST" action="{% url 'send_message' group.id %}" id="message-form-{{ group.id }}" class="message-form-ajax" data-group-id="{{ group.id }}" enctype="multipart/form-data">
         {% csrf_token %}

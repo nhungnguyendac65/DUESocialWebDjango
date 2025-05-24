@@ -55,9 +55,7 @@ class CustomUser(AbstractUser):
     # username: có sẵn từ AbstractUser, max_length mặc định là 150, có thể tùy chỉnh
     # password: có sẵn từ AbstractUser
 
-    # GÁN CUSTOM USER MANAGER
     objects = CustomUserManager()
-    # Thêm related_name để tránh xung đột với user_set mặc định của Group và Permission
     groups = models.ManyToManyField(
         Group,
         verbose_name=_('groups'),
@@ -66,7 +64,7 @@ class CustomUser(AbstractUser):
             'The groups this user belongs to. A user will get all permissions '
             'granted to each of their groups.'
         ),
-        related_name="customuser_groups", # Khác với user_set
+        related_name="customuser_groups",
         related_query_name="customuser",
     )
     user_permissions = models.ManyToManyField(
@@ -74,7 +72,7 @@ class CustomUser(AbstractUser):
         verbose_name=_('user permissions'),
         blank=True,
         help_text=_('Specific permissions for this user.'),
-        related_name="customuser_permissions", # Khác với user_set
+        related_name="customuser_permissions",
         related_query_name="customuser",
     )
 
@@ -84,9 +82,6 @@ class CustomUser(AbstractUser):
 class Profile(models.Model):
     user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     avatar = models.ImageField(upload_to='avatars/', null=True, blank=True, default='avatars/default_avatar.png')
-    # Thêm các trường thông tin cá nhân khác nếu cần (ví dụ: bio, birthday, ...)
-    # followers và following sẽ được xử lý qua model Follow
-
     def __str__(self):
         return f"{self.user.username}'s Profile"
 
@@ -96,7 +91,7 @@ class Follow(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        unique_together = ('follower', 'following') # Đảm bảo không theo dõi 1 người nhiều lần
+        unique_together = ('follower', 'following')
 
     def __str__(self):
         return f"{self.follower} follows {self.following}"
@@ -111,25 +106,20 @@ class Post(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
-    # Cho việc chia sẻ bài viết khác
     shared_from_post = models.ForeignKey(
         'self',
         on_delete=models.SET_NULL,
         null=True, blank=True,
-        related_name='posts_sharing_this'  # Đổi related_name để rõ ràng hơn
+        related_name='posts_sharing_this'
     )
     original_poster_name = models.CharField(max_length=150, blank=True, null=True)
 
-    # THÊM TRƯỜNG NÀY ĐỂ LIÊN KẾT VỚI EVENT ĐƯỢC CHIA SẺ
     shared_event = models.ForeignKey(
         'Event',
-        on_delete=models.SET_NULL,  # Hoặc CASCADE nếu muốn bài Post share bị xóa khi Event gốc bị xóa
+        on_delete=models.SET_NULL,
         null=True, blank=True,
         related_name='posts_sharing_this_event'
     )
-
-    # (Tùy chọn) Lưu tên sự kiện gốc, phòng trường hợp sự kiện gốc bị xóa
-    # original_event_title = models.CharField(max_length=255, blank=True, null=True)
 
     def __str__(self):
         if self.shared_event:
@@ -150,10 +140,8 @@ class Post(models.Model):
         return self.likes.count()
 
     def get_absolute_url(self):
-        # Nếu là bài share sự kiện, có thể trỏ đến chi tiết sự kiện hoặc chi tiết post
         if self.shared_event:
             return reverse('event_detail', kwargs={'event_id': self.shared_event.pk})
-        # Nếu là bài share post hoặc bài post gốc, trỏ đến post_detail
         return reverse('post_detail', kwargs={'post_id': self.pk})
 
     class Meta:
@@ -170,9 +158,6 @@ class Like(models.Model):
 
 class Comment(models.Model):
     author = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
-    # Sử dụng string reference cho Post và Event nếu chúng được định nghĩa sau trong file,
-    # hoặc để linh hoạt hơn.
-    # Nếu Post và Event đã được định nghĩa ở trên, bạn có thể dùng trực tiếp tên class.
     post = models.ForeignKey('Post', related_name='comments_on_post', on_delete=models.CASCADE, null=True, blank=True)
     content = models.TextField()
     created_at = models.DateTimeField(auto_now_add=True)
@@ -193,7 +178,7 @@ class Bookmark(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        unique_together = ('user', 'post') # Để 1 user chỉ bookmark 1 post 1 lần
+        unique_together = ('user', 'post')
 
 class EventTag(models.Model):
     name = models.CharField(max_length=50, unique=True)
@@ -208,51 +193,48 @@ class Event(models.Model):
     image = models.ImageField(upload_to='event_images/', blank=True, null=True)
     tags = models.ManyToManyField(EventTag, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True) # Thêm trường này nếu chưa có
+    updated_at = models.DateTimeField(auto_now=True)
 
-    # Trường để xử lý việc chia sẻ sự kiện
     shared_from_event = models.ForeignKey(
         'self',
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
-        related_name='shared_events' # Các sự kiện được tạo ra từ việc share sự kiện này
+        related_name='shared_events'
     )
-    # Lưu tên người tạo sự kiện gốc, phòng trường hợp sự kiện gốc hoặc người tạo gốc bị xóa
     original_event_creator_name = models.CharField(max_length=150, blank=True, null=True)
 
 
     def __str__(self):
         return self.title
 
-    def get_absolute_url(self): # Nếu bạn có trang chi tiết sự kiện
+    def get_absolute_url(self):
         return reverse('event_detail', kwargs={'event_id': self.pk})
 
-    # Thêm property để dễ dàng truy cập likes_count nếu cần trong template
     @property
     def likes_count(self):
         return self.likes.count()
 
 class Report(models.Model):
     REASON_CHOICES = [
-        ('spam', 'Spam hoặc quảng cáo không phù hợp'), # [cite: 20]
-        ('offensive', 'Nội dung phản cảm'), # [cite: 20]
-        ('misinformation', 'Thông tin sai lệch'), # [cite: 20]
-        ('other', 'Khác'), # [cite: 20]
+        ('spam', 'Spam hoặc quảng cáo không phù hợp'),
+        ('offensive', 'Nội dung phản cảm'),
+        ('misinformation', 'Thông tin sai lệch'),
+        ('other', 'Khác'),
     ]
     reporter = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     post = models.ForeignKey(Post, on_delete=models.CASCADE)
     reason = models.CharField(max_length=20, choices=REASON_CHOICES)
-    description = models.TextField(blank=True, null=True) # Cho lý do 'Khác' [cite: 21]
+    description = models.TextField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     is_resolved = models.BooleanField(default=False)
 
 # --- Models cho Nhắn tin ---
 class ChatGroup(models.Model):
-    name = models.CharField(max_length=100, blank=True) # Tên nhóm chat [cite: 45]
+    name = models.CharField(max_length=100, blank=True)
     members = models.ManyToManyField(settings.AUTH_USER_MODEL, related_name='chat_groups')
     creator = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, related_name='created_groups', limit_choices_to={'role__in': ['mod', 'admin']}) # [cite: 45]
-    is_private_chat = models.BooleanField(default=False) # True nếu là chat 1-1
+    is_private_chat = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
@@ -265,8 +247,8 @@ class Message(models.Model):
     group = models.ForeignKey(ChatGroup, related_name='messages', on_delete=models.CASCADE)
     sender = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     content = models.TextField(blank=True, null=True)
-    image = models.ImageField(upload_to='chat_images/', blank=True, null=True) # [cite: 36]
-    file_attachment = models.FileField(upload_to='chat_files/', blank=True, null=True) # [cite: 36]
+    image = models.ImageField(upload_to='chat_images/', blank=True, null=True)
+    file_attachment = models.FileField(upload_to='chat_files/', blank=True, null=True)
     timestamp = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
@@ -297,12 +279,6 @@ class ActivityLog(models.Model):
     action_type = models.CharField(max_length=50, choices=ACTION_CHOICES, verbose_name="Loại hành động")
     description = models.TextField(verbose_name="Mô tả chi tiết")
     timestamp = models.DateTimeField(default=timezone.now, verbose_name="Thời điểm")
-    # Bạn có thể thêm các trường GenericForeignKey để trỏ đến đối tượng liên quan (ví dụ: Post, User, Event)
-    # from django.contrib.contenttypes.fields import GenericForeignKey
-    # from django.contrib.contenttypes.models import ContentType
-    # content_type = models.ForeignKey(ContentType, null=True, blank=True, on_delete=models.SET_NULL)
-    # object_id = models.PositiveIntegerField(null=True, blank=True)
-    # content_object = GenericForeignKey('content_type', 'object_id')
 
     class Meta:
         ordering = ['-timestamp']

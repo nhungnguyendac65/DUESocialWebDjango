@@ -15,7 +15,7 @@
     <p class="text-muted">Đây là những sự kiện bạn đã <i class="fas fa-heart text-danger"></i> thích (lưu lại).</p> {# [cite: 32] #}
 
     <div class="row">
-        {% for event in my_liked_events %} {# my_liked_events cần được truyền từ view #}
+        {% for event in my_liked_events %}
             <div class="col-md-6 col-lg-4 mb-3">
                 {% include "core/partials/_event_card.html" with event=event %}
             </div>
@@ -29,7 +29,6 @@
             </div>
         {% endfor %}
     </div>
-    {# Trong mục sự kiện của tôi, thì có thể bỏ lưu sự kiện đó. [cite: 32] (Nút like/unlike trong _event_card.html đã xử lý việc này) #}
 </div>
 {% endblock %}
 

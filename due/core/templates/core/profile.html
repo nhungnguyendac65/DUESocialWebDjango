@@ -20,7 +20,7 @@
         background-size: cover;
         background-position: center;
         border-radius: 0 0 0.75rem 0.75rem;
-        margin-bottom: -70px; /* Điều chỉnh để avatar đè lên vừa phải */
+        margin-bottom: -70px;
         position: relative;
     }
 
@@ -29,21 +29,21 @@
         border-radius: 0.75rem;
         box-shadow: 0 4px 12px rgba(0,0,0,.08);
         padding: 1.5rem;
-        padding-top: 75px; /* Khoảng trống cho avatar (bằng 1 nửa chiều cao avatar + chút padding) */
+        padding-top: 75px;
         position: relative;
         z-index: 10;
     }
 
     .profile-avatar-wrapper {
-        width: 130px; /* Giảm kích thước avatar */
-        height: 130px; /* Giảm kích thước avatar */
+        width: 130px;
+        height: 130px;
         border-radius: 50%;
         overflow: hidden;
         border: 4px solid #ffffff;
         box-shadow: 0 2px 8px rgba(0,0,0,0.15);
         margin: 0 auto;
         position: absolute;
-        top: -65px; /* Một nửa chiều cao avatar (130/2 = 65) */
+        top: -65px;
         left: 50%;
         transform: translateX(-50%);
         background-color: #e9ecef;
@@ -64,13 +64,13 @@
     .profile-name {
         font-size: 1.7rem;
         font-weight: 700;
-        margin-top: 0.25rem; /* Giảm khoảng cách với avatar */
-        margin-bottom: 0.25rem; /* Khoảng cách với username */
+        margin-top: 0.25rem;
+        margin-bottom: 0.25rem;
     }
     .profile-username {
         color: #6c757d;
         font-size: 0.95rem;
-        margin-bottom: 0.75rem; /* Giảm khoảng cách với stats/bio */
+        margin-bottom: 0.75rem;
     }
     .profile-bio {
         font-size: 0.9rem;
@@ -82,17 +82,17 @@
     }
 
     .profile-stats {
-        margin-bottom: 1rem; /* Giảm khoảng cách với actions */
+        margin-bottom: 1rem;
     }
     .profile-stats > div {
-        padding: 0 0.5rem; /* Giảm padding ngang của mỗi item stat */
+        padding: 0 0.5rem;
         text-align: center;
     }
     .profile-stats a, .profile-stats .stat-item-no-link {
         color: #495057;
         text-decoration: none;
         display: inline-block;
-        padding: 0.1rem 0.3rem; /* Giảm padding link */
+        padding: 0.1rem 0.3rem;
         border-radius: 0.25rem;
         transition: background-color 0.2s ease;
     }
@@ -108,7 +108,7 @@
         margin-bottom: 0;
     }
     .profile-stats span.text-muted {
-        font-size: 0.7rem; /* Giữ kích thước text nhỏ */
+        font-size: 0.7rem;
         text-transform: uppercase;
         letter-spacing: 0.05em;
     }
@@ -234,10 +234,10 @@
     @media (max-width: 767.98px) {
         .profile-cover-photo {
             height: 200px;
-            margin-bottom: -55px; /* Điều chỉnh theo avatar mới (120px/2 - chút xíu) */
+            margin-bottom: -55px;
         }
         .profile-header-card {
-            padding-top: 70px; /* Khoảng 120px/2 + padding */
+            padding-top: 70px;
             margin-left: 0.5rem;
             margin-right: 0.5rem;
         }
@@ -331,12 +331,6 @@
                         <strong>{{ following_count|intcomma }}</strong>
                         <span class="text-muted">Đang theo dõi</span>
                     </a>
-                </div>
-                <div>
-                    <span class="stat-item-no-link">
-                        <strong>{{ posts.count|intcomma }}</strong>
-                        <span class="text-muted">Bài viết</span>
-                    </span>
                 </div>
             </div>
 
@@ -440,21 +434,25 @@
 
                 <h4 class="mb-3 {% if is_own_profile %}mt-4{% endif %}">Bài viết</h4>
                 <div id="profile-post-list">
-                    {% for post_item in posts %}
-                        {% if post_item.shared_from %}
+                    {% for post_item_loopvar in posts %} {# Biến 'posts' được truyền từ context của view #}
+                        {% if post_item_loopvar.shared_from_post %} {# Nếu là bài share một post khác #}
                             <div class="shared-post-frame-wrapper">
                                 <div class="shared-post-info">
                                     <small class="text-muted d-block">
                                         <i class="fas fa-retweet me-1 text-secondary"></i>
-                                        <a href="{% url 'profile' post_item.author.username %}" class="text-decoration-none fw-medium">{{ post_item.author.get_full_name|default:post_item.author.username }}</a> đã chia sẻ
-                                        <span class="float-end">{{ post_item.created_at|naturaltime }}</span>
+                                        <a href="{% url 'profile' post_item_loopvar.author.username %}" class="text-decoration-none fw-medium">{{ post_item_loopvar.author.get_full_name|default:post_item_loopvar.author.username }}</a> đã chia sẻ
+                                        <span class="float-end">{{ post_item_loopvar.created_at|naturaltime }}</span>
                                     </small>
                                 </div>
-                                {% include "core/partials/_post_card.html" with post=post_item.shared_from original_sharer_post=post_item is_shared_on_profile=True remove_outer_margin=True %}
+                                {% include "core/partials/_post_card.html" with post=post_item_loopvar.shared_from_post original_sharer_post=post_item_loopvar is_shared_on_profile=True remove_outer_margin=True edit_post_form_for_this_card=post_item_loopvar.shared_from_post.edit_form_instance %}
                             </div>
-                        {% else %}
+                        {% elif post_item_loopvar.shared_event %} {# Nếu là bài share một sự kiện #}
+                            <div class="shared-post-frame-wrapper">
+                                {% include "core/partials/_post_card.html" with post=post_item_loopvar remove_outer_margin=True %}
+                            </div>
+                        {% else %} {# Đây là bài viết gốc #}
                             <div class="mb-3">
-                                {% include "core/partials/_post_card.html" with post=post_item %}
+                                {% include "core/partials/_post_card.html" with post=post_item_loopvar edit_post_form_for_this_card=post_item_loopvar.edit_form_instance %}
                             </div>
                         {% endif %}
                     {% empty %}

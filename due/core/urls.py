@@ -47,6 +47,9 @@ urlpatterns = [
     path('events/my/', views.my_events_view, name='my_events'),
     path('event/<int:event_id>/', views.event_detail_view, name='event_detail'),
     path('event/<int:event_id>/share/', views.share_event_view, name='share_event'),
+    path('event/<int:event_id>/edit/', views.edit_event_view, name='edit_event'),
+    path('event/<int:event_id>/delete/', views.delete_event_view, name='delete_event'), # Giả sử đã có
+    path('event/<int:event_id>/report/', views.report_event_view, name='report_event'), # Giả sử đã có
 
     # Messaging
     path('messages/', views.message_center_view, name='message_center'),
@@ -56,7 +59,9 @@ urlpatterns = [
     path('messages/block_user/<int:user_id_to_block>/', views.block_user_view, name='block_user'),
     path('messages/chat/<int:group_id>/members/', views.group_members_view, name='group_members'),
     path('messages/chat/<int:group_id>/leave/', views.leave_group_view, name='leave_group_view'),
-
+    path('messages/chat/<int:group_id>/add_members/', views.add_members_to_group_view, name='add_members_to_group'),
+    path('messages/chat/<int:group_id>/remove_member/<int:user_id>/', views.remove_member_from_group_view,
+         name='remove_member_from_group'),
 
     # Mod/Admin
     path('mod/create_group_chat/', views.mod_create_group_chat_view, name='mod_create_group_chat'),

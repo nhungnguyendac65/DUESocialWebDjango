@@ -1,13 +1,12 @@
-// File: core/static/core/js/follow_handler.js
 document.addEventListener('DOMContentLoaded', function() {
-    const csrftoken = getCookie('csrftoken'); // Hàm này phải được định nghĩa và hoạt động
+    const csrftoken = getCookie('csrftoken');
 
     document.body.addEventListener('click', function(event) {
         let button = event.target.closest('.toggle-follow-btn');
 
         if (button) {
             event.preventDefault();
-            const userIdToFollow = button.dataset.userId; // ID của người dùng được follow/unfollow
+            const userIdToFollow = button.dataset.userId;
             const followTextSpan = button.querySelector('.follow-text');
             const iconElement = button.querySelector('i');
 
@@ -55,16 +54,15 @@ document.addEventListener('DOMContentLoaded', function() {
                     }
 
                     // CẬP NHẬT SỐ LƯỢNG NGƯỜI THEO DÕI
-                    // userIdToFollow là ID của profile_user mà trang đang hiển thị
                     const followersCountElement = document.getElementById(`profile-followers-count-${userIdToFollow}`);
 
-                    console.log(`Looking for element with ID: profile-followers-count-${userIdToFollow}`); // DEBUG
-                    console.log(`Found element:`, followersCountElement); // DEBUG
-                    console.log(`Data from server:`, data); // DEBUG
+                    console.log(`Looking for element with ID: profile-followers-count-${userIdToFollow}`);
+                    console.log(`Found element:`, followersCountElement);
+                    console.log(`Data from server:`, data);
 
                     if (followersCountElement && data.followers_count !== undefined) {
                         followersCountElement.textContent = data.followers_count;
-                        console.log(`Updated followers count to: ${data.followers_count}`); // DEBUG
+                        console.log(`Updated followers count to: ${data.followers_count}`);
                     } else {
                         if (!followersCountElement) {
                             console.error(`Element with ID profile-followers-count-${userIdToFollow} NOT FOUND in DOM.`);
@@ -87,7 +85,6 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 });
 
-// Hàm getCookie
 if (typeof getCookie !== 'function') {
     function getCookie(name) {
         let cookieValue = null;

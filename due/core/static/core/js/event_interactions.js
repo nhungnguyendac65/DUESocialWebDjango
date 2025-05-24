@@ -1,10 +1,8 @@
 document.addEventListener('DOMContentLoaded', function() {
-    const csrftoken = getCookie('csrftoken'); // Đảm bảo hàm getCookie đã tồn tại
+    const csrftoken = getCookie('csrftoken');
 
-    // Sử dụng event delegation cho tất cả các nút tương tác trên sự kiện
     document.body.addEventListener('click', function(event) {
-
-        // --- Xử lý Like Event ---
+        //Like
         const likeButton = event.target.closest('.like-event-btn');
         if (likeButton) {
             event.preventDefault();
@@ -52,20 +50,16 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (countSpan && data.likes_count !== undefined) {
                     countSpan.textContent = data.likes_count;
                 }
-                 if (data.message) { // Hiển thị thông báo từ server (ví dụ: "Đã lưu sự kiện...")
-                    // Bạn có thể thay alert bằng một thông báo tinh tế hơn (Bootstrap toast)
-                    // alert(data.message);
+                 if (data.message) {
                     console.log(data.message);
                  }
             })
             .catch(error => {
                 console.error('Lỗi khi thích sự kiện:', error);
-                // alert('Có lỗi xảy ra khi thực hiện hành động này. Vui lòng thử lại.');
             });
             return;
         }
 
-        // --- Xử lý nút "Bình luận" trên Event Card (CHỈ ĐIỀU HƯỚNG) ---
         const commentCardButton = event.target.closest('.comment-event-btn');
         if (commentCardButton) {
             event.preventDefault();
@@ -76,19 +70,14 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
 
-        // --- Xử lý nút "Bình luận" trên trang Event Detail ---
-        // Vì đã bỏ chức năng bình luận, nút này trên event_detail.html nếu còn thì không làm gì nhiều
         const commentDetailButton = event.target.closest('.comment-event-btn-detail');
         if (commentDetailButton) {
             const eventId = commentDetailButton.dataset.eventId;
-            // Nếu bạn muốn nút này focus vào một vùng nào đó (ví dụ: nếu sau này thêm lại bình luận)
-            // const commentSection = document.getElementById(`comments-section-event-${eventId}`);
-            // if(commentSection) commentSection.scrollIntoView({ behavior: 'smooth' });
             console.log("Nút bình luận trên trang chi tiết sự kiện được nhấn (chức năng bình luận đã bị loại bỏ).");
             return;
         }
 
-        // --- Xử lý nút Share Event ---
+        //Share Event
         const shareButton = event.target.closest('.share-event-btn-detail') || event.target.closest('.share-event-btn');
         if (shareButton) {
             event.preventDefault();
@@ -102,15 +91,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 })
                 .then(response => {
                     if (response.ok) {
-                        // View share_event_view đang redirect, trình duyệt sẽ tự động theo
-                        // Nếu không redirect mà trả về JSON, xử lý ở đây
-                        // Ví dụ, nếu server trả về message trong JSON:
-                        // return response.json().then(data => {
-                        //     alert(data.message || "Sự kiện đã được chia sẻ!");
-                        //     window.location.reload(); // Hoặc cập nhật UI động
-                        // });
-                        // Hiện tại view redirect, nên chỉ cần reload để thấy message từ Django messages framework
-                        alert("Sự kiện đã được chia sẻ! Trang sẽ được tải lại."); // Thông báo tạm thời
+                        alert("Sự kiện đã được chia sẻ! Trang sẽ được tải lại.");
                         window.location.reload();
                     } else {
                         return response.text().then(text => {
@@ -132,12 +113,10 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
 
-    }); // Kết thúc event listener cho document.body
+    });
 
-}); // Kết thúc DOMContentLoaded
+});
 
-
-// Hàm getCookie (phải được định nghĩa đúng và chỉ một lần)
 if (typeof getCookie !== 'function') {
     function getCookie(name) {
         let cookieValue = null;

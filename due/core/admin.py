@@ -5,7 +5,6 @@ from .models import ActivityLog, CustomUser, Post, Comment, Like, Bookmark, Even
 
 class CustomUserAdmin(UserAdmin):
     model = CustomUser
-    # Thêm các field của CustomUser vào list_display, fieldsets, add_fieldsets
     list_display = ['username', 'email', 'first_name', 'last_name', 'role', 'is_staff']
     fieldsets = UserAdmin.fieldsets + (
         (None, {'fields': ('avatar', 'phone_number', 'role')}),
@@ -19,4 +18,3 @@ admin.site.register(Profile)
 admin.site.register(Post)
 admin.site.register(Comment)
 
-# ... đăng ký các model khác

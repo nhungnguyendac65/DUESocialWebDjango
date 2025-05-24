@@ -1,140 +1,279 @@
 {% extends "core/base.html" %}
 {% load static %}
+{% load humanize %}
 
-{% block title %}{{ post.title }} - DUE Network{% endblock %}
+{% block title %}{{ post.title|truncatechars:60 }} - DUE Network{% endblock %}
+
+{% block extra_head %}
+<style>
+    .post-detail-page-wrapper {
+        background-color: #f8f9fa;
+        padding-top: 1.5rem;
+        padding-bottom: 3rem;
+    }
+    .post-detail-card-main {
+        background-color: #fff;
+        padding: 2rem;
+        border-radius: 0.5rem;
+        box-shadow: 0 0.25rem 0.75rem rgba(0,0,0,.05);
+        margin-bottom: 1.5rem;
+    }
+    .post-detail-header .author-avatar {
+        width: 50px;
+        height: 50px;
+        object-fit: cover;
+        border: 2px solid #eee;
+    }
+    .post-detail-header .author-info strong {
+        font-size: 1.1rem;
+        font-weight: 600;
+    }
+    .post-detail-title {
+        font-size: 2.2rem;
+        font-weight: 700;
+        color: #212529;
+        margin-top: 0.5rem;
+        margin-bottom: 1.25rem;
+        line-height: 1.3;
+    }
+    .post-detail-image-container {
+        margin-top: 1rem;
+        margin-bottom: 1.5rem;
+        text-align: center;
+    }
+    .post-detail-image {
+        max-width: 100%;
+        max-height: 600px;
+        object-fit: contain;
+        border-radius: 0.375rem;
+    }
+    .post-content-full {
+        line-height: 1.75;
+        color: #343a40;
+        font-size: 1.05rem;
+        word-wrap: break-word;
+    }
+    .post-file-attachment a.btn {
+        font-size: 0.9rem;
+        background-color: #e9ecef;
+        border-color: #e9ecef;
+        color: #495057;
+    }
+    .post-file-attachment a.btn:hover {
+        background-color: #dee2e6;
+        border-color: #dee2e6;
+    }
+    .post-actions-footer {
+        border-top: 1px solid #e9ecef;
+        padding-top: 1rem;
+        margin-top: 2rem;
+    }
+    .post-actions-footer .btn-link {
+        text-decoration: none;
+        font-size: 0.95rem;
+        color: #555;
+        font-weight: 500;
+    }
+    .post-actions-footer .btn-link:hover {
+        color: #00095E;
+        background-color: rgba(0, 9, 94, 0.05);
+    }
+    .post-actions-footer .btn-link.text-danger {
+        color: #dc3545 !important;
+    }
+    .post-actions-footer .btn-link.text-danger:hover {
+        background-color: rgba(220, 53, 69, 0.05);
+    }
+    .comments-wrapper-card {
+        background-color: #fff;
+        padding: 1.5rem 2rem;
+        border-radius: 0.5rem;
+        box-shadow: 0 0.25rem 0.75rem rgba(0,0,0,.05);
+    }
+    .comments-wrapper-card h4, .comments-wrapper-card h5 {
+        font-weight: 600;
+        color: #333;
+        margin-bottom: 1rem;
+    }
+    .comment-form-ajax textarea.form-control {
+        border-radius: 0.375rem;
+        min-height: 80px;
+    }
+    .comment-form-ajax .btn-primary {
+        background-color: #00095E;
+        border-color: #00095E;
+    }
+    .comment-form-ajax .btn-primary:hover {
+        background-color: #001f3f;
+        border-color: #001f3f;
+    }
+    #comments-list-{{post.id}} .comment-item {
+        padding-bottom: 0.75rem;
+        margin-bottom: 0.75rem;
+        border-bottom: 1px solid #f1f3f5;
+    }
+    #comments-list-{{post.id}} .comment-item:last-child {
+        border-bottom: none;
+        margin-bottom: 0;
+    }
+</style>
+{% endblock %}
 
 {% block content %}
-<div class="container mt-4">
-    <div class="row justify-content-center">
-        <div class="col-lg-8">
-            <div class="card mb-3 post-card" id="post-{{ post.id }}">
-                <div class="card-body">
-                    <div class="d-flex align-items-center mb-3">
+<div class="post-detail-page-wrapper">
+    <div class="container mt-3 mb-4">
+        <div class="row justify-content-center">
+            <div class="col-lg-9">
+                <div class="post-detail-card-main">
+                    <div class="d-flex align-items-center mb-3 post-detail-header">
                         <a href="{% url 'profile' post.author.username %}">
-                            <img src="{{ post.author.profile.avatar.url }}" alt="{{ post.author.username }}" class="rounded-circle me-3" width="50" height="50">
+                            {% if post.author.profile and post.author.profile.avatar and post.author.profile.avatar.name %}
+                                <img src="{{ post.author.profile.avatar.url }}" alt="{{ post.author.username }}" class="rounded-circle me-3 author-avatar">
+                            {% else %}
+                                <img src="{% static 'core/images/default_placeholder_avatar.png' %}" alt="{{ post.author.username }}" class="rounded-circle me-3 author-avatar">
+                            {% endif %}
                         </a>
-                        <div>
+                        <div class="author-info">
                             <a href="{% url 'profile' post.author.username %}" class="text-decoration-none text-dark">
-                                <strong class="d-block fs-5">{{ post.author.get_full_name|default:post.author.username }}</strong>
+                                <strong class="d-block">{{ post.author.get_full_name|default:post.author.username }}</strong>
                             </a>
-                            <small class="text-muted">@{{ post.author.username }} &bull; {{ post.created_at|timesince }} ago</small>
+                            <small class="text-muted">@{{ post.author.username }} &bull; {{ post.created_at|naturaltime }}</small>
                         </div>
-                        {% if post.author == request.user or request.user.role in "mod admin" %}
+                        {% if user.is_authenticated %}
                         <div class="ms-auto dropdown">
-                            <button class="btn btn-link text-muted" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            <button class="btn btn-link text-muted py-0 px-1" type="button" id="postDetailOptionsDropdown-{{ post.id }}" data-bs-toggle="dropdown" aria-expanded="false">
                                 <i class="fas fa-ellipsis-h"></i>
                             </button>
-                            <ul class="dropdown-menu">
+                            <ul class="dropdown-menu dropdown-menu-end shadow border-0" aria-labelledby="postDetailOptionsDropdown-{{ post.id }}">
                                 {% if post.author == request.user %}
-                                    <li><a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#editPostModal-{{ post.id }}">Sửa bài viết</a></li>
+                                    <li><a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#editPostModal-{{ post.id }}"><i class="fas fa-edit fa-fw me-2"></i>Sửa bài viết</a></li>
                                     <li>
-                                        <form action="{% url 'delete_post' post.id %}" method="POST" onsubmit="return confirm('Bạn có chắc chắn muốn xóa bài viết này?');">
+                                        <form action="{% url 'delete_post' post.id %}" method="POST" onsubmit="return confirm('Bạn có chắc chắn muốn xóa bài viết này?');" class="d-inline">
                                             {% csrf_token %}
-                                            <button type="submit" class="dropdown-item text-danger">Xoá bài viết</button>
-                                        </form>
-                                    </li>
-                                {% elif request.user.role in "mod admin" %}
-                                    <li>
-                                        <form action="{% url 'delete_post' post.id %}" method="POST" onsubmit="return confirm('Bạn (Mod/Admin) có chắc chắn muốn xóa bài viết này?');">
-                                            {% csrf_token %}
-                                            <button type="submit" class="dropdown-item text-danger">Xoá bài viết (Mod/Admin)</button>
+                                            <button type="submit" class="dropdown-item text-danger"><i class="fas fa-trash-alt fa-fw me-2"></i>Xoá bài viết</button>
                                         </form>
                                     </li>
                                 {% else %}
-                                    <li><a class="dropdown-item" href="{% url 'report_post' post.id %}">Báo cáo bài viết</a></li>
+                                    <li><a class="dropdown-item" href="{% url 'report_post' post.id %}"><i class="fas fa-flag fa-fw me-2"></i>Báo cáo bài viết</a></li>
+                                {% endif %}
+                                {% if request.user.role in "mod admin" and post.author != request.user %}
+                                    <li><hr class="dropdown-divider my-1"></li>
+                                    <li>
+                                        <form action="{% url 'delete_post' post.id %}" method="POST" onsubmit="return confirm('Bạn (QTV) chắc chắn muốn xóa bài viết này của @{{post.author.username}}?');" class="d-inline">
+                                            {% csrf_token %}
+                                            <button type="submit" class="dropdown-item text-danger"><i class="fas fa-user-shield fa-fw me-2"></i>Xoá (QTV)</button>
+                                        </form>
+                                    </li>
                                 {% endif %}
                             </ul>
                         </div>
                         {% endif %}
                     </div>
 
-                    <h4>{{ post.title }}</h4>
+                    <h1 class="post-detail-title">{{ post.title_or_default }}</h1>
+                    <hr class="my-3">
 
-                    {% if post.image %}
-                    <img src="{{ post.image.url }}" class="img-fluid rounded my-3" alt="Post image for {{ post.title }}">
+                    {% if post.image and post.image.name %}
+                    <div class="post-detail-image-container">
+                        <img src="{{ post.image.url }}" alt="Ảnh minh họa cho {{ post.title_or_default }}" class="post-detail-image">
+                    </div>
                     {% endif %}
 
-                    <div class="post-content-full">
+                    <div class="post-content-full mt-3">
                         {{ post.content|linebreaksbr }}
                     </div>
 
-                    {% if post.file_attachment %}
-                    <div class="mt-3">
-                        <a href="{{ post.file_attachment.url }}" target="_blank" class="btn btn-outline-secondary">
-                            <i class="fas fa-paperclip"></i> {{ post.file_attachment.name|cut:"post_files/" }}
+                    {% if post.file_attachment and post.file_attachment.name %}
+                    <div class="mt-4 post-file-attachment">
+                        <a href="{{ post.file_attachment.url }}" target="_blank" class="btn btn-outline-secondary btn-sm">
+                            <i class="fas fa-paperclip me-1"></i> {{ post.file_attachment.name|cut:"post_files/"|truncatechars:40 }}
                         </a>
                     </div>
                     {% endif %}
-                </div>
-                <div class="card-footer bg-transparent d-flex justify-content-around py-2">
-                    <button class="btn btn-lg btn-link text-muted like-btn {% if post.is_liked_by_user %}text-danger{% endif %}" data-post-id="{{ post.id }}">
-                        <i class="fa-heart {% if post.is_liked_by_user %}fas{% else %}far{% endif %}"></i> <span class="like-count small">{{ post.likes.count }}</span>
-                    </button>
-                    <button class="btn btn-lg btn-link text-muted" onclick="document.getElementById('comment-input-{{post.id}}').focus()">
-                        <i class="far fa-comment"></i> <span class="small">{{ post.comments.count }}</span>
-                    </button>
-                    <button class="btn btn-lg btn-link text-muted share-btn" data-post-id="{{ post.id }}">
-                        <i class="fas fa-share"></i>
-                    </button>
-                    <button class="btn btn-lg btn-link text-muted bookmark-btn {% if post.is_bookmarked_by_user %}text-primary{% endif %}" data-post-id="{{ post.id }}">
-                        <i class="fa-bookmark {% if post.is_bookmarked_by_user %}fas{% else %}far{% endif %}"></i>
-                    </button>
-                </div>
-            </div>
 
-            {% if user.is_authenticated %}
-            <div class="card mb-3">
-                <div class="card-body">
-                    <h5 class="card-title">Để lại bình luận</h5>
-                    <form method="POST" action="{% url 'api_add_comment' post.id %}" id="comment-form-{{post.id}}" class="comment-form-ajax" data-post-id="{{post.id}}">
-                        {% csrf_token %}
-                        <div class="d-flex">
-                            <img src="{{ request.user.profile.avatar.url }}" alt="{{ request.user.username }}" class="rounded-circle me-2" width="40" height="40" style="margin-top: 5px;">
-                            <textarea name="content" class="form-control" id="comment-input-{{post.id}}" rows="2" placeholder="Viết bình luận của bạn..." required></textarea>
-                        </div>
-                        <div class="text-end mt-2">
-                            <button type="submit" class="btn btn-primary btn-sm">Gửi bình luận</button>
-                        </div>
-                    </form>
+                    <div class="post-actions-footer d-flex justify-content-around">
+                        <button class="btn btn-link like-btn {% if post.is_liked_by_user %}text-danger{% endif %}" data-post-id="{{ post.id }}">
+                            <i class="fa-heart {% if post.is_liked_by_user %}fas text-danger{% else %}far{% endif %}"></i>
+                            <span class="like-count small">{{ post.likes.count|default:0 }}</span> Thích
+                        </button>
+                        <button class="btn btn-link" onclick="document.getElementById('comment-input-{{post.id}}').focus()">
+                            <i class="far fa-comment"></i>
+                            <span class="small">{{ post.comments_on_post.count|default:0 }}</span> Bình luận
+                        </button>
+                        <button class="btn btn-link share-btn" data-post-id="{{ post.shared_from_post.id|default:post.id }}">
+                            <i class="fas fa-share"></i> Chia sẻ
+                        </button>
+                        <button class="btn btn-link bookmark-btn {% if post.is_bookmarked_by_user %}text-primary-custom{% endif %}" data-post-id="{{ post.id }}">
+                            <i class="fa-bookmark {% if post.is_bookmarked_by_user %}fas{% else %}far{% endif %}"></i> Lưu
+                        </button>
+                    </div>
                 </div>
-            </div>
-            {% endif %}
 
-            <div class="card">
-                <div class="card-body">
-                    <h5 class="card-title mb-3">Bình luận (<span id="comment-count-{{post.id}}">{{ post.comments.count }}</span>)</h5>
-                    <div id="comments-list-{{post.id}}">
-                        {% for comment in comments %}
-                            {% include "core/partials/_comment.html" with comment=comment %}
+                <div class="comments-wrapper-card mt-4" id="comments-section-{{post.id}}">
+                    <h4>Bình luận (<span id="comment-count-{{post.id}}">{{ post.comments_on_post.count|default:0 }}</span>)</h4>
+
+                    <div id="comments-list-{{post.id}}" class="my-3">
+                        {% for comment_item in comments %} {# Đổi tên biến lặp để tránh xung đột nếu _comment.html cũng dùng 'comment' #}
+                            {% include "core/partials/_comment.html" with comment=comment_item %}
                         {% empty %}
-                            <p class="text-muted text-center" id="no-comments-{{post.id}}">Chưa có bình luận nào. Hãy là người đầu tiên!</p>
+                            <p class="text-muted fst-italic" id="no-comments-{{post.id}}">Chưa có bình luận nào. Hãy là người đầu tiên!</p>
                         {% endfor %}
                     </div>
+
+                    {% if user.is_authenticated %}
+                    <form method="POST" action="{% url 'api_add_comment' post.id %}" id="comment-form-{{post.id}}" class="comment-form-ajax mb-0" data-post-id="{{post.id}}">
+                        {% csrf_token %}
+                        <div class="d-flex align-items-start">
+                            {% if request.user.profile and request.user.profile.avatar and request.user.profile.avatar.name %}
+                            <img src="{{ request.user.profile.avatar.url }}" alt="{{ request.user.username }}" class="rounded-circle me-3" width="45" height="45" style="object-fit: cover;">
+                            {% else %}
+                            <img src="{% static 'core/images/default_placeholder_avatar.png' %}" alt="{{ request.user.username }}" class="rounded-circle me-3" width="45" height="45" style="object-fit: cover;">
+                            {% endif %}
+                            <textarea name="content" class="form-control flex-grow-1" rows="2" placeholder="Viết bình luận của bạn..." required id="comment-input-{{post.id}}"></textarea>
+                        </div>
+                        <div class="text-end mt-2">
+                            <button type="submit" class="btn btn-primary btn-sm">
+                                <i class="fas fa-paper-plane me-1"></i>Gửi bình luận
+                            </button>
+                        </div>
+                    </form>
+                    {% else %}
+                        <p class="text-center"><a href="{% url 'login' %}?next={{ request.path }}" class="btn btn-outline-primary btn-sm">Đăng nhập</a> để bình luận.</p>
+                    {% endif %}
                 </div>
             </div>
         </div>
     </div>
 </div>
 
-{% if post.author == request.user %}
-    {% include "core/partials/_edit_post_modal.html" with post=post post_form=edit_post_form %} {# edit_post_form cần được truyền từ view #}
+{% if post.author == request.user and edit_post_form %}
+    {% include "core/partials/_edit_post_modal.html" with post=post post_form=edit_post_form %}
 {% endif %}
 
 {% endblock %}
 
 {% block extra_scripts %}
-    <script src="{% static 'core/js/post_interactions.js' %}"></script> {# Giả sử hàm getCookie ở đây #}
+    {{ block.super }}
+    <script src="{% static 'core/js/post_interactions.js' %}"></script>
+    {# KHÔI PHỤC LẠI ĐOẠN JAVASCRIPT XỬ LÝ COMMENT AJAX #}
     <script>
     document.addEventListener('DOMContentLoaded', function() {
+        // Kích hoạt tooltips
+        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+        var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl)
+        });
+
+        // Xử lý submit comment bằng AJAX
         document.querySelectorAll('.comment-form-ajax').forEach(form => {
             form.addEventListener('submit', function(e) {
                 e.preventDefault();
                 const postId = this.dataset.postId;
                 const contentTextarea = this.querySelector('textarea[name="content"]');
-                const content = contentTextarea ? contentTextarea.value.trim() : null; // Lấy và trim content
-                const csrftoken = getCookie('csrftoken'); // Hàm này phải được định nghĩa ở đâu đó (ví dụ: post_interactions.js)
+                const content = contentTextarea ? contentTextarea.value.trim() : null;
+                const csrftoken = getCookie('csrftoken'); // Hàm này phải được định nghĩa (ví dụ trong post_interactions.js)
 
-                if (!content) { // Kiểm tra content rỗng ở client-side
+                if (!content) {
                     alert("Vui lòng nhập nội dung bình luận.");
                     return;
                 }
@@ -148,9 +287,8 @@
                     body: JSON.stringify({ content: content })
                 })
                 .then(response => {
-                    if (!response.ok) { // Nếu server trả về lỗi (4xx, 5xx)
+                    if (!response.ok) {
                         return response.json().then(errData => {
-                            // Xử lý lỗi chi tiết hơn
                             let errorMessage = "Lỗi không xác định khi gửi bình luận.";
                             if (errData.content && Array.isArray(errData.content)) {
                                 errorMessage = errData.content.join(" ");
@@ -159,7 +297,7 @@
                             } else if (errData.detail) {
                                 errorMessage = errData.detail;
                             } else {
-                                errorMessage = JSON.stringify(errData);
+                                try { errorMessage = JSON.stringify(errData); } catch (e) {}
                             }
                             throw new Error(errorMessage);
                         });
@@ -167,8 +305,6 @@
                     return response.json();
                 })
                 .then(data => {
-                    // 'data' bây giờ là object comment đã được serialize, ví dụ:
-                    // data = { id: 1, post: 1, author: {id:1, username:'admin', avatar_url:'...'}, content:'...', created_at:'...' }
                     if (data.id && data.author) {
                         const commentsList = document.getElementById('comments-list-' + postId);
                         const noCommentsMsg = document.getElementById('no-comments-' + postId);
@@ -178,34 +314,32 @@
                         newCommentDiv.classList.add('comment-item', 'd-flex', 'mb-3');
                         newCommentDiv.id = `comment-${data.id}`;
 
-                        // Lấy thông tin author từ data.author
                         const authorUsername = data.author.username || "Ẩn danh";
                         const authorFullName = (data.author.first_name ? `${data.author.first_name} ${data.author.last_name || ''}`.trim() : authorUsername);
-                        const authorAvatarUrl = data.author.avatar_url; // Đã có URL đầy đủ từ serializer
+                        const authorAvatarUrl = data.author.avatar_url; // Lấy từ serializer
 
                         newCommentDiv.innerHTML = `
                             <a href="/profile/${authorUsername}/" class="flex-shrink-0">
-                                <img src="${authorAvatarUrl}" alt="${authorUsername}" class="rounded-circle me-2" width="35" height="35" style="object-fit: cover;">
+                                <img src="${authorAvatarUrl}" alt="${authorUsername}" class="rounded-circle me-2" width="40" height="40" style="object-fit: cover;">
                             </a>
                             <div class="flex-grow-1">
-                                <div class="bg-light p-2 rounded">
-                                    <a href="/profile/${authorUsername}/" class="text-decoration-none fw-bold text-dark">${authorFullName}</a>
-                                    <p class="mb-0 small">${data.content.replace(/\n/g, '<br>')}</p>
+                                <div class="bg-light p-2 px-3 rounded shadow-sm">
+                                    <a href="/profile/${authorUsername}/" class="text-decoration-none fw-bold text-dark me-2">${authorFullName}</a>
+                                    <small class="text-muted">${new Date(data.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}, ${new Date(data.created_at).toLocaleDateString()}</small>
+                                    <p class="mb-0 mt-1 small">${data.content.replace(/\n/g, '<br>')}</p>
                                 </div>
-                                <small class="text-muted ms-2">${new Date(data.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}, ${new Date(data.created_at).toLocaleDateString()}</small>
                             </div>`;
 
                         if(commentsList) {
-                            commentsList.appendChild(newCommentDiv); // Thêm vào cuối
+                            commentsList.appendChild(newCommentDiv);
                         }
-                        if(contentTextarea) contentTextarea.value = ''; // Xóa nội dung textarea
+                        if(contentTextarea) contentTextarea.value = '';
 
-                        // Cập nhật số lượng comment
                         const commentCountSpan = document.getElementById('comment-count-' + postId);
-                        if(commentCountSpan) commentCountSpan.textContent = parseInt(commentCountSpan.textContent) + 1;
+                        if(commentCountSpan) commentCountSpan.textContent = parseInt(commentCountSpan.textContent || 0) + 1;
 
-                        const postCardCommentCount = document.querySelector(`#post-${postId} .card-footer .fa-comment + .small`);
-                        if(postCardCommentCount) postCardCommentCount.textContent = parseInt(postCardCommentCount.textContent) + 1;
+                        const postCardCommentCount = document.querySelector(`#post-${postId} .card-footer .fa-comment + .small`); // Cập nhật số lượng trên card (nếu có)
+                        if(postCardCommentCount) postCardCommentCount.textContent = parseInt(postCardCommentCount.textContent || 0) + 1;
 
                     } else {
                         console.error('Lỗi khi thêm bình luận (dữ liệu trả về không có id hoặc author):', data);

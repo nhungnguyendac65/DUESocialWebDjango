@@ -31,6 +31,8 @@ ALLOWED_HOSTS = []
 # Application definition
 
 INSTALLED_APPS = [
+    'jazzmin',
+
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -42,6 +44,7 @@ INSTALLED_APPS = [
     'rest_framework', # Django REST framework
     'crispy_forms',
     'crispy_bootstrap5',
+
 ]
 
 MIDDLEWARE = [
@@ -142,3 +145,40 @@ MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 LOGIN_URL = 'login' # Tên URL của trang đăng nhập
 LOGIN_REDIRECT_URL = 'home' # Tên URL của trang chủ sau khi đăng nhập
 LOGOUT_REDIRECT_URL = 'login'
+
+JAZZMIN_SETTINGS = {
+    "site_title": "DUE Network Admin",
+    "site_header": "DUE Network",
+    "site_brand": "DUE Admin",
+    "site_logo": "core/images/duenw.png",
+    "login_logo": "core/images/duenw.png",
+    "welcome_sign": "Chào mừng đến với trang quản trị DUE Network",
+    "copyright": "DUE Network",
+    "topmenu_links": [
+        {"name": "Trang chủ Site", "url": "home", "permissions": ["auth.view_user"]},
+        {"app": "core"},
+    ],
+    "ui_tweaks": {
+        "navbar_small_text": False,
+        "footer_small_text": False,
+        "body_small_text": False,
+        "brand_small_text": False,
+        "brand_colour": "navbar-primary",
+        "accent": "accent-primary",
+        "navbar": "navbar-white navbar-light",
+        "no_navbar_border": False,
+        "sidebar": "sidebar-dark-primary",
+        "sidebar_nav_legacy_style": False,
+        "sidebar_nav_flat_style": True,
+        "button_classes": {
+            "primary": "btn-primary", # Ví dụ: nút primary sẽ có class 'btn-primary' của Bootstrap
+            "secondary": "btn-secondary",
+            "info": "btn-info",
+            "warning": "btn-warning",
+            "danger": "btn-danger",
+            "success": "btn-success"
+        },
+        "theme": "default"
+    },
+    "custom_css": "core/css/admin_jazzmin_custom.css",
+}

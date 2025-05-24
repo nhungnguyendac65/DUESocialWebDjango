@@ -1,6 +1,6 @@
-{% extends "core/base.html" %} {# Hoặc một base template khác dành cho admin/mod #}
+{% extends "core/base.html" %}
 {% load static %}
-{% load humanize %} {# Để dùng {{ report.created_at|naturaltime }} #}
+{% load humanize %}
 
 {% block title %}Xử lý Báo cáo Vi phạm - DUE Network{% endblock %}
 
@@ -9,10 +9,10 @@
     .reported-posts-page-wrapper {
         background-color: #f8f9fa;
         padding: 1.5rem;
-        min-height: calc(100vh - 56px); /* Điều chỉnh nếu navbar có chiều cao khác */
+        min-height: calc(100vh - 56px);
     }
     .report-card {
-        border-left: 5px solid #dc3545; /* Viền đỏ cho báo cáo */
+        border-left: 5px solid #dc3545;
     }
     .report-card .card-header {
         background-color: rgba(220, 53, 69, 0.1);
@@ -142,49 +142,9 @@
     <script>
     function confirmAction(form, message) {
         if (confirm(message)) {
-            // Không cần làm gì thêm, form sẽ tự submit
             return true;
         }
         return false;
     }
-
-    // Optional: AJAX form submission để không reload trang (phức tạp hơn)
-    // document.querySelectorAll('.resolve-report-form').forEach(form => {
-    //     form.addEventListener('submit', function(e) {
-    //         e.preventDefault();
-    //         if (!confirmAction(this, "Thực hiện hành động này?")) return;
-
-    //         const formData = new FormData(this);
-    //         const actionUrl = this.action;
-    //         const reportId = this.closest('.report-card').id.split('-')[1];
-
-    //         fetch(actionUrl, {
-    //             method: 'POST',
-    //             body: formData,
-    //             headers: {
-    //                 'X-CSRFToken': formData.get('csrfmiddlewaretoken')
-    //             }
-    //         })
-    //         .then(response => response.json()) // Giả sử view trả về JSON
-    //         .then(data => {
-    //             if (data.success) {
-    //                 const reportCard = document.getElementById('report-' + reportId);
-    //                 if (reportCard) {
-    //                     reportCard.style.transition = 'opacity 0.5s ease';
-    //                     reportCard.style.opacity = '0';
-    //                     setTimeout(() => reportCard.remove(), 500);
-    //                 }
-    //                 // Hiển thị thông báo thành công (ví dụ: Bootstrap toast)
-    //                 // alert(data.message);
-    //             } else {
-    //                 // alert('Lỗi: ' + data.message);
-    //             }
-    //         })
-    //         .catch(error => {
-    //             console.error('Error resolving report:', error);
-    //             // alert('Đã có lỗi xảy ra.');
-    //         });
-    //     });
-    // });
     </script>
 {% endblock %}

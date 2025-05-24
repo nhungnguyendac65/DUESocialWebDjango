@@ -3,20 +3,21 @@ from django.contrib.auth import login, logout, authenticate, update_session_auth
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib.auth.forms import AuthenticationForm, PasswordChangeForm
 from django.contrib import messages
-from django.http import JsonResponse, HttpResponseForbidden, HttpResponseBadRequest
+from django.http import JsonResponse, HttpResponseForbidden
 from django.views.decorators.http import require_POST
 from django.db.models import OuterRef, Subquery, Q, Count
 from django.db import models
-from .models import (ActivityLog,CustomUser, Post, Comment, Like, Bookmark, Follow,
+from django import forms
+from .models import (ActivityLog,CustomUser, Post, Like, Bookmark, Follow,
                      Event, EventTag, Report, ChatGroup, Message, BlockedUser, Profile)
 from .forms import (CustomUserCreationForm, CustomUserChangeForm, PostForm,
-                    CommentForm, ReportForm, EventForm, GroupChatCreationForm,
+                    CommentForm, ReportForm, EventForm, GroupChatCreationForm,AddMembersToGroupForm,
                     MessageForm, CustomPasswordResetForm, AdminUserCreationForm)
 
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status, permissions
-from .serializers import PostSerializer, CommentSerializer, EventCommentSerializer
+from .serializers import CommentSerializer
 from django.core.paginator import Paginator
 
 
@@ -26,22 +27,18 @@ def register_view(request):
         form = CustomUserCreationForm(request.POST)
         if form.is_valid():
             user = form.save()
-            # Tạo Profile tự động khi user đăng ký
             Profile.objects.create(user=user)
-            # Gán role 'user' mặc định đã được set trong model
             login(request, user)
 
             ActivityLog.objects.create(
-                actor=user,  # Người dùng vừa đăng ký
+                actor=user,
                 action_type='USER_REGISTERED',
                 description=f"Người dùng @{user.username} đã đăng ký tài khoản mới."
             )
 
             messages.success(request, "Đăng ký thành công!")
-            return redirect('home') # Chuyển đến trang chủ
+            return redirect('home')
         else:
-            # In lỗi form ra console để debug nếu cần
-            # print(form.errors.as_json())
             for field, errors in form.errors.items():
                 for error in errors:
                     messages.error(request, f"{field}: {error}")
@@ -49,7 +46,7 @@ def register_view(request):
         form = CustomUserCreationForm()
     return render(request, 'core/auth/register.html', {'form': form})
 
-def login_view(request): # [cite: 3, 4]
+def login_view(request):
     if request.method == 'POST':
         form = AuthenticationForm(request, data=request.POST)
         if form.is_valid():
@@ -82,32 +79,30 @@ def logout_view(request):
     messages.info(request, "Bạn đã đăng xuất.")
     return redirect('login')
 
-# Placeholder cho Quên mật khẩu [cite: 3]
 def password_reset_request_view(request):
     if request.method == "POST":
         form = CustomPasswordResetForm(request.POST)
         if form.is_valid():
-            # Logic gửi email reset (Django có sẵn)
-            # form.save(...)
             messages.success(request, "Hướng dẫn đặt lại mật khẩu đã được gửi đến email của bạn (nếu tồn tại).")
             return redirect('login')
     else:
         form = CustomPasswordResetForm()
     return render(request, "core/auth/password_reset_form.html", {"form": form})
-# Bạn cần cấu hình thêm các view cho password_reset_done, password_reset_confirm, password_reset_complete
 
 
 # --- Core Views ---
 @login_required
 def home_view(request):
-    # Sửa 'comments' thành 'comments_on_post' trong prefetch_related
-    posts_query = Post.objects.select_related('author__profile').prefetch_related(
+    posts_query = Post.objects.select_related(
+        'author__profile',
+        'shared_from_post__author__profile',
+        'shared_event__creator__profile'
+    ).prefetch_related(
         'likes',
-        'comments_on_post',  # <<< THAY ĐỔI Ở ĐÂY
-        'bookmarked_by'  # Nếu bạn muốn prefetch cả bookmark
+        'comments_on_post__author__profile',
+        'bookmarked_by'
     ).order_by('-created_at')
 
-    # Gán thêm is_liked_by_user và is_bookmarked_by_user cho mỗi post
     user_liked_post_ids = set()
     user_bookmarked_post_ids = set()
     if request.user.is_authenticated:
@@ -117,46 +112,97 @@ def home_view(request):
 
     posts_list = []
     for post_item in posts_query:
-        # Xác định bài viết thực sự để kiểm tra like/bookmark
-        post_to_display_interaction = post_item.shared_from if post_item.shared_from else post_item
+        post_item.is_liked_by_user = post_item.id in user_liked_post_ids
+        post_item.is_bookmarked_by_user = post_item.id in user_bookmarked_post_ids
 
-        if post_to_display_interaction:
-            post_to_display_interaction.is_liked_by_user = post_to_display_interaction.id in user_liked_post_ids
-            post_to_display_interaction.is_bookmarked_by_user = post_to_display_interaction.id in user_bookmarked_post_ids
-
-        if post_item.shared_from:
-            post_item.shared_from = post_to_display_interaction
-        else:  # Nếu là bài gốc, gán trực tiếp cho post_item
-            post_item.is_liked_by_user = post_item.id in user_liked_post_ids
-            post_item.is_bookmarked_by_user = post_item.id in user_bookmarked_post_ids
+        if request.user == post_item.author and not post_item.shared_from_post and not post_item.shared_event:
+            post_item.edit_form_instance = PostForm(instance=post_item)
+        else:
+            post_item.edit_form_instance = None
 
         posts_list.append(post_item)
 
-    post_form = PostForm()
+    post_form_for_creation = PostForm()
     context = {
         'posts': posts_list,
-        'post_form': post_form,
-        'sub_page_title': 'Trang chủ'  # Tùy chọn
+        'post_form': post_form_for_creation,
+        'sub_page_title': 'Trang chủ'
     }
     return render(request, 'core/home.html', context)
 
+
 @login_required
-def profile_view(request, username): # [cite: 5]
-    profile_user = get_object_or_404(CustomUser, username=username)
-    posts = Post.objects.filter(author=profile_user).order_by('-created_at') # [cite: 14]
+def profile_view(request, username):
+    profile_user = get_object_or_404(CustomUser.objects.select_related('profile'),
+                                     username=username)
+
+    posts_by_user_query = Post.objects.filter(author=profile_user).select_related(
+        'author__profile',
+        'shared_from_post__author__profile',
+        'shared_event__creator__profile'
+    ).prefetch_related(
+        'likes',
+        'comments_on_post__author__profile',
+        'bookmarked_by',
+        'shared_event__tags'
+    ).distinct().order_by('-created_at')
+
     is_own_profile = (request.user == profile_user)
-    is_following = Follow.objects.filter(follower=request.user, following=profile_user).exists() if request.user.is_authenticated else False
-    followers_count = profile_user.follower_set.count() # [cite: 15]
+    is_following = False
+    if request.user.is_authenticated and not is_own_profile:
+        is_following = Follow.objects.filter(follower=request.user, following=profile_user).exists()
+
+    followers_count = profile_user.follower_set.count()
     following_count = profile_user.following_set.count()
+
+    post_form_for_creation_on_profile = None
+    if is_own_profile:
+        post_form_for_creation_on_profile = PostForm()
+
+    # Lấy sự kiện đã quan tâm (giữ nguyên logic này nếu bạn đã có)
+    liked_event_ids_by_profile_user = Like.objects.filter(
+        user=profile_user,
+        event__isnull=False
+    ).order_by('-created_at').values_list('event_id', flat=True)[:3]
+    recent_liked_events_query = Event.objects.filter(id__in=liked_event_ids_by_profile_user).select_related(
+        'creator__profile').prefetch_related('tags')
+    event_map = {event.id: event for event in recent_liked_events_query}
+    ordered_recent_liked_events = [event_map[event_id] for event_id in liked_event_ids_by_profile_user if
+                                   event_id in event_map]
+
+    user_liked_post_ids = set()
+    user_bookmarked_post_ids = set()
+    if request.user.is_authenticated:
+        user_liked_post_ids = set(
+            Like.objects.filter(user=request.user, post__isnull=False).values_list('post_id', flat=True))
+        user_bookmarked_post_ids = set(Bookmark.objects.filter(user=request.user).values_list('post_id', flat=True))
+
+    processed_posts = []
+    for post_item in posts_by_user_query:
+        post_item.is_liked_by_user = post_item.id in user_liked_post_ids
+        post_item.is_bookmarked_by_user = post_item.id in user_bookmarked_post_ids
+
+        if post_item.shared_from_post:
+            post_item.shared_from_post.is_liked_by_user = post_item.shared_from_post.id in user_liked_post_ids
+            post_item.shared_from_post.is_bookmarked_by_user = post_item.shared_from_post.id in user_bookmarked_post_ids
+
+        if request.user == post_item.author and not post_item.shared_from_post and not post_item.shared_event:
+            post_item.edit_form_instance = PostForm(instance=post_item)
+        else:
+            post_item.edit_form_instance = None
+
+        processed_posts.append(post_item)
 
     context = {
         'profile_user': profile_user,
-        'posts': posts,
+        'posts': processed_posts,
         'is_own_profile': is_own_profile,
         'is_following': is_following,
         'followers_count': followers_count,
         'following_count': following_count,
-        'post_form': PostForm() if is_own_profile else None # Nút đăng bài trên trang cá nhân [cite: 17]
+        'post_form': post_form_for_creation_on_profile,
+        'recent_liked_events': ordered_recent_liked_events,
+        'sub_page_title': f"@{profile_user.username}"
     }
     return render(request, 'core/profile.html', context)
 
@@ -164,10 +210,8 @@ def profile_view(request, username): # [cite: 5]
 def user_followers_view(request, username):
     profile_user_obj = get_object_or_404(CustomUser.objects.select_related('profile'), username=username)
 
-    # Lấy danh sách User objects là follower
     follower_users_qs = CustomUser.objects.filter(following_set__following=profile_user_obj).order_by('username').distinct()
 
-    # Xử lý is_followed_by_request_user cho mỗi user trong danh sách
     followers_list_processed = []
     if request.user.is_authenticated:
         following_by_request_user_ids = set(Follow.objects.filter(follower=request.user).values_list('following_id', flat=True))
@@ -178,13 +222,13 @@ def user_followers_view(request, username):
         followers_list_processed = list(follower_users_qs)
 
 
-    paginator = Paginator(followers_list_processed, 15) # Hiển thị 15 người mỗi trang
+    paginator = Paginator(followers_list_processed, 15)
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
 
     context = {
-        'profile_user_page': profile_user_obj, # Đổi tên biến để khớp template
-        'relationship_list_page': page_obj,   # Đổi tên biến để khớp template
+        'profile_user_page': profile_user_obj,
+        'relationship_list_page': page_obj,
         'type': 'followers'
     }
     return render(request, 'core/followers_list.html', context)
@@ -192,8 +236,6 @@ def user_followers_view(request, username):
 @login_required
 def user_following_view(request, username):
     profile_user_obj = get_object_or_404(CustomUser.objects.select_related('profile'), username=username)
-
-    # Lấy danh sách User objects mà profile_user_obj đang following
     following_users_qs = CustomUser.objects.filter(follower_set__follower=profile_user_obj).order_by('username').distinct()
 
     following_list_processed = []
@@ -211,31 +253,23 @@ def user_following_view(request, username):
     page_obj = paginator.get_page(page_number)
 
     context = {
-        'profile_user_page': profile_user_obj, # Đổi tên biến
-        'relationship_list_page': page_obj,   # Đổi tên biến
+        'profile_user_page': profile_user_obj,
+        'relationship_list_page': page_obj,
         'type': 'following'
     }
-    # Có thể dùng chung template followers_list.html hoặc tạo following_list.html riêng
     return render(request, 'core/followers_list.html', context)
 
 @login_required
-@require_POST # Chỉ chấp nhận POST request
-def create_post_view(request): # [cite: 9, 24]
+@require_POST
+def create_post_view(request):
     form = PostForm(request.POST, request.FILES)
     if form.is_valid():
         post = form.save(commit=False)
         post.author = request.user
         post.save()
         messages.success(request, "Đăng bài thành công!")
-        # Nếu dùng AJAX, trả về JsonResponse
-        # For AJAX:
-        # serializer = PostSerializer(post, context={'request': request})
-        # return JsonResponse({'post': serializer.data}, status=201)
-        return redirect(request.META.get('HTTP_REFERER', 'home')) # Quay lại trang trước đó
+        return redirect(request.META.get('HTTP_REFERER', 'home'))
     else:
-        # Xử lý lỗi form, có thể trả về JsonResponse với lỗi nếu dùng AJAX
-        # For AJAX:
-        # return JsonResponse({'errors': form.errors}, status=400)
         messages.error(request, "Đăng bài thất bại. Vui lòng kiểm tra lại thông tin.")
         for field, errors in form.errors.items():
             for error in errors:
@@ -245,25 +279,21 @@ def create_post_view(request): # [cite: 9, 24]
 
 @login_required
 def post_detail_view(request, post_id):
-    # Sửa 'comments__author' thành 'comments_on_post__author' trong prefetch_related
     post = get_object_or_404(
         Post.objects.select_related('author__profile').prefetch_related(
             'likes',
             'comments_on_post__author__profile',
-            # <<< THAY ĐỔI Ở ĐÂY: prefetch author của comment và profile của author đó
             'bookmarked_by'
         ),
         id=post_id
     )
 
-    # Lấy danh sách bình luận sử dụng related_name mới
-    comments = post.comments_on_post.order_by('created_at')  # <<< THAY ĐỔI Ở ĐÂY
+    comments = post.comments_on_post.order_by('created_at')
+    comment_form = CommentForm()
 
-    comment_form = CommentForm()  # Form để người dùng thêm bình luận mới
-
-    edit_post_form = None
-    if request.user == post.author:
-        edit_post_form = PostForm(instance=post)
+    edit_post_form_for_detail = None
+    if request.user == post.author and not post.shared_from_post and not post.shared_event:
+        edit_post_form_for_detail = PostForm(instance=post)
 
     if request.user.is_authenticated:
         post.is_liked_by_user = post.likes.filter(user=request.user).exists()
@@ -274,9 +304,9 @@ def post_detail_view(request, post_id):
 
     context = {
         'post': post,
-        'comments': comments,  # comments này đã được lấy bằng related_name đúng
+        'comments': comments,
         'comment_form': comment_form,
-        'edit_post_form': edit_post_form,
+        'edit_post_form': edit_post_form_for_detail,
         'sub_page_title': post.title
     }
     return render(request, 'core/post_detail.html', context)
@@ -284,7 +314,7 @@ def post_detail_view(request, post_id):
 
 @login_required
 @require_POST
-def edit_post_view(request, post_id): # [cite: 18]
+def edit_post_view(request, post_id):
     post = get_object_or_404(Post, id=post_id, author=request.user)
     form = PostForm(request.POST, request.FILES, instance=post)
     if form.is_valid():
@@ -292,36 +322,52 @@ def edit_post_view(request, post_id): # [cite: 18]
         messages.success(request, "Bài viết đã được cập nhật.")
         return redirect('post_detail', post_id=post.id)
     else:
-        # Xử lý lỗi
         messages.error(request, "Cập nhật thất bại.")
         return render(request, 'core/edit_post_form.html', {'form': form, 'post': post}) # Cần template cho form sửa
 
+
 @login_required
 @require_POST
-def delete_post_view(request, post_id): # [cite: 18]
-    post = get_object_or_404(Post, id=post_id)
-    # Kiểm tra quyền xóa: hoặc là tác giả, hoặc là Mod/Admin
-    if post.author == request.user or request.user.role in ['mod', 'admin']:
-        if post.shared_from and post.author == request.user: # Xóa bài share [cite: 19]
-            post.delete()
-            messages.success(request, "Đã xóa bài viết chia sẻ khỏi trang cá nhân của bạn.")
-        elif post.author == request.user: # Xóa bài gốc của mình
-            post.delete()
-            messages.success(request, "Bài viết đã được xóa.")
-        elif request.user.role in ['mod', 'admin']: # Mod/Admin xóa bài vi phạm
-             post.delete()
-             messages.success(request, f"Bài viết của {post.author.username} đã được xóa (bởi {request.user.role}).")
-        else:
-            messages.error(request, "Bạn không có quyền xóa bài viết này.")
-            return HttpResponseForbidden()
+def delete_post_view(request, post_id):
+    post_to_delete = get_object_or_404(Post, id=post_id)
 
-        # Nếu dùng AJAX
-        # return JsonResponse({'message': 'Post deleted successfully'}, status=200)
-        return redirect(request.META.get('HTTP_REFERER', 'home'))
+    can_delete = False
+    if post_to_delete.author == request.user:
+        can_delete = True
+    elif request.user.role in ['admin'] or request.user.is_superuser:
+        can_delete = True
+
+    if not can_delete:
+        messages.error(request, "Bạn không có quyền xóa mục này.")
+        # Xác định URL để redirect nếu không có quyền
+        if post_to_delete.shared_from_post:  # SỬA Ở ĐÂY
+            return redirect('post_detail', post_id=post_to_delete.shared_from_post.id)
+        elif post_to_delete.shared_event:
+            return redirect('event_detail', event_id=post_to_delete.shared_event.id)
+        elif post_to_delete.title:  # Bài gốc
+            return redirect('post_detail', post_id=post_to_delete.id)
+        return redirect('home')
+
+    post_title_or_type = ""
+    if post_to_delete.shared_from_post:
+        post_title_or_type = f"bài chia sẻ về '{post_to_delete.shared_from_post.title}'"
+    elif post_to_delete.shared_event:
+        post_title_or_type = f"bài chia sẻ về sự kiện '{post_to_delete.shared_event.title}'"
     else:
-        messages.error(request, "Bạn không có quyền thực hiện hành động này.")
-        return HttpResponseForbidden()
+        post_title_or_type = f"bài viết '{post_to_delete.title or 'không có tiêu đề'}'"
 
+    try:
+        post_to_delete.delete()
+        if request.user == post_to_delete.author:
+            messages.success(request, f"Đã xóa {post_title_or_type} thành công.")
+        else:  # Mod/Admin xóa
+            messages.success(request,
+                             f"{post_title_or_type} của @{post_to_delete.author.username} đã được xóa bởi Quản trị viên.")
+
+    except Exception as e:
+        messages.error(request, f"Lỗi khi xóa: {e}")
+        return redirect(request.META.get('HTTP_REFERER', 'home'))
+    return redirect(request.META.get('HTTP_REFERER', 'home'))
 
 @login_required
 def report_post_view(request, post_id): # [cite: 20]
@@ -594,35 +640,34 @@ def like_event_api_view(request, event_id): # [cite: 32]
     return JsonResponse({'liked': liked, 'likes_count': event.likes.count(), 'message': message})
 
 @login_required
-@require_POST # Đảm bảo chỉ nhận POST request
+@require_POST
 def share_event_view(request, event_id):
     original_event = get_object_or_404(Event, id=event_id)
+
+    # Kiểm tra xem người dùng đã share sự kiện này thành Post chưa
+    if Post.objects.filter(author=request.user, shared_event=original_event).exists():
+        messages.warning(request, "Bạn đã chia sẻ sự kiện này rồi.")
+        # Redirect về trang chi tiết sự kiện hoặc trang trước đó
+        return redirect(request.META.get('HTTP_REFERER', original_event.get_absolute_url() if hasattr(original_event, 'get_absolute_url') else 'event_list'))
+
     try:
-        shared_event_title = f"Đã chia sẻ: {original_event.title}"
-        if len(shared_event_title) > 255: # Giới hạn chiều dài tiêu đề
-            shared_event_title = shared_event_title[:252] + "..."
-
-        shared_event = Event.objects.create(
-            creator=request.user, # Người chia sẻ là người tạo của "bản share" này
-            title=shared_event_title,
-            content=original_event.content, # Nội dung có thể là của sự kiện gốc
-            image=original_event.image,     # Có thể dùng lại ảnh
-            shared_from_event=original_event,
-            original_event_creator_name=original_event.creator.get_full_name() or original_event.creator.username
-            # Tags có thể không cần copy qua, hoặc bạn có thể copy:
-            # new_event.tags.set(original_event.tags.all()) sau khi new_event.save()
+        # Tạo một bài Post mới để đại diện cho việc chia sẻ sự kiện
+        # User có thể nhập thêm lời dẫn khi share, ở đây ta tạo một Post đơn giản
+        Post.objects.create(
+            author=request.user,
+            # Title và content của Post này có thể để trống hoặc bạn cho phép người dùng nhập
+            # Nếu để trống, template _post_card.html sẽ cần xử lý việc này
+            # title=f"Chia sẻ sự kiện: {original_event.title}", # Ví dụ
+            # content="Hãy xem sự kiện thú vị này!",          # Ví dụ
+            shared_event=original_event # QUAN TRỌNG: Liên kết Post với Event gốc
         )
-        # Nếu Event có tags và bạn muốn copy:
-        # shared_event.tags.set(original_event.tags.all())
-
-        messages.success(request, "Sự kiện đã được chia sẻ thành công!")
+        messages.success(request, "Sự kiện đã được chia sẻ về trang cá nhân của bạn!")
     except Exception as e:
         messages.error(request, f"Không thể chia sẻ sự kiện: {e}")
-        # Có thể log lỗi ở đây
-        print(f"Error sharing event: {e}")
+        print(f"Error sharing event as post: {e}")
 
-
-    return redirect(request.META.get('HTTP_REFERER', 'event_list')) # Quay lại trang trước đó
+    # Redirect về trang trước đó hoặc trang chi tiết sự kiện
+    return redirect(request.META.get('HTTP_REFERER', original_event.get_absolute_url() if hasattr(original_event, 'get_absolute_url') else 'event_list'))
 
 # --- Messaging Views ---
 @login_required
@@ -861,15 +906,93 @@ def mod_create_group_chat_view(request): # [cite: 45]
 
 
 @login_required
+@user_passes_test(is_mod_or_admin_user)
+def add_members_to_group_view(request, group_id):
+    group = get_object_or_404(ChatGroup, id=group_id)
+
+    # Chỉ người tạo nhóm (creator) hoặc admin/superuser mới có quyền thêm thành viên
+    if not (request.user == group.creator or request.user.is_superuser or request.user.role == 'admin'):
+        messages.error(request, "Bạn không có quyền thêm thành viên vào nhóm này.")
+        return redirect('chat_room', group_id=group.id)
+
+    if group.is_private_chat:  # Không cho thêm thành viên vào chat 1-1
+        messages.error(request, "Không thể thêm thành viên vào cuộc trò chuyện cá nhân.")
+        return redirect('chat_room', group_id=group.id)
+
+    if request.method == 'POST':
+        form = AddMembersToGroupForm(request.POST, group=group)  # Truyền group vào form
+        if form.is_valid():
+            users_to_add = form.cleaned_data['members_to_add']
+            for user in users_to_add:
+                group.members.add(user)
+            group.save()  # Lưu lại group sau khi thêm members (không bắt buộc nếu chỉ thay đổi m2m)
+            messages.success(request, f"Đã thêm {users_to_add.count()} thành viên mới vào nhóm '{group.name}'.")
+            return redirect('chat_room', group_id=group.id)
+        else:
+            messages.error(request, "Thêm thành viên thất bại. Vui lòng kiểm tra lại.")
+    else:
+        form = AddMembersToGroupForm(group=group)  # Truyền group để form biết loại trừ ai
+
+    context = {
+        'form': form,
+        'group': group,
+        'sub_page_title': f"Thêm thành viên vào nhóm: {group.name}"
+    }
+    return render(request, 'core/messaging/add_members_to_group_form.html', context)
+
+@login_required
+@require_POST  # Chỉ chấp nhận POST request cho hành động này
+def remove_member_from_group_view(request, group_id, user_id):
+    group = get_object_or_404(ChatGroup, id=group_id)
+    user_to_remove = get_object_or_404(CustomUser, id=user_id)
+
+    # Kiểm tra quyền: Chỉ người tạo nhóm (creator) mới có quyền xóa thành viên
+    # và không được xóa chính mình, không được xóa người tạo nhóm (nếu là người khác)
+    if request.user != group.creator:
+        messages.error(request, "Bạn không phải là người tạo nhóm nên không có quyền xóa thành viên.")
+        return redirect('chat_room', group_id=group.id)  # Hoặc trả về lỗi HTTP
+
+    if group.is_private_chat:  # Không cho xóa thành viên khỏi chat 1-1 bằng cách này
+        messages.error(request, "Hành động này không áp dụng cho cuộc trò chuyện cá nhân.")
+        return redirect('chat_room', group_id=group.id)
+
+    if user_to_remove == group.creator:
+        messages.error(request, "Bạn không thể xóa người tạo nhóm khỏi nhóm.")
+        return redirect('chat_room', group_id=group.id)  # Hoặc tới trang quản lý thành viên
+
+    if user_to_remove not in group.members.all():
+        messages.warning(request, f"Người dùng {user_to_remove.username} không phải là thành viên của nhóm này.")
+        return redirect('chat_room', group_id=group.id)
+
+    try:
+        group.members.remove(user_to_remove)
+        messages.success(request, f"Đã xóa thành công người dùng {user_to_remove.username} khỏi nhóm '{group.name}'.")
+
+        # Ghi log hoạt động nếu cần
+        ActivityLog.objects.create(
+            actor=request.user,
+            action_type='USER_ROLE_CHANGED',  # Hoặc một action_type mới như 'MEMBER_REMOVED_FROM_GROUP'
+            description=f"@{request.user.username} đã xóa @{user_to_remove.username} khỏi nhóm chat '{group.name}' (ID: {group.id})."
+        )
+
+    except Exception as e:
+        messages.error(request, f"Lỗi khi xóa thành viên: {e}")
+
+    # Redirect về lại trang xem thành viên (nếu có) hoặc phòng chat
+    # Nếu bạn muốn modal tự đóng và danh sách thành viên tự cập nhật, cần dùng AJAX.
+    # Hiện tại, chúng ta sẽ redirect về phòng chat.
+    return redirect('chat_room', group_id=group.id)
+
+@login_required
 def reported_posts_view(request): # Dành cho Mod/Admin [cite: 46]
     if request.user.role not in ['mod', 'admin']:
         return HttpResponseForbidden()
     reports = Report.objects.filter(is_resolved=False).select_related('post__author', 'reporter').order_by('-created_at')
     return render(request, 'core/admin_mod/reported_posts.html', {'reports': reports})
 
-def is_mod_or_admin_user(user): # <<< ĐỊNH NGHĨA HÀM NÀY Ở ĐÂY
-    return user.is_authenticated and (user.role in ['mod', 'admin'] or user.is_superuser)
-@user_passes_test(is_mod_or_admin_user)
+def is_admin_user(user):
+    return user.is_authenticated and (user.role in ['admin'] or user.is_superuser)
+@user_passes_test(is_admin_user)
 @login_required
 @require_POST
 def resolve_report_view(request, report_id):
@@ -880,18 +1003,14 @@ def resolve_report_view(request, report_id):
     if action == 'delete_post':
         if post_to_action:
             post_title = post_to_action.title
-            post_author_username = post_to_action.author.username  # Lưu lại để dùng trong message
-
-            # Đánh dấu report là đã giải quyết TRƯỚC KHI xóa post
-            # Điều này hữu ích nếu bạn muốn ghi lại hành động trước khi đối tượng Report có thể bị xóa theo Post
+            post_author_username = post_to_action.author.username
             report.is_resolved = True
-            report.save()  # Lưu trạng thái của report
+            report.save()
 
-            post_to_action.delete()  # Xóa Post. Nếu on_delete=CASCADE trên Report.post, report cũng sẽ bị xóa.
-            # Nếu on_delete=SET_NULL, report.post sẽ thành None.
+            post_to_action.delete()
             ActivityLog.objects.create(
-                actor=request.user,  # Mod/Admin thực hiện
-                action_type='POST_DELETED',  # Hoặc 'REPORT_RESOLVED_POST_DELETED'
+                actor=request.user,
+                action_type='POST_DELETED',
                 description=f"Bài viết '{post_title}' của @{post_author_username} đã bị xóa bởi @{request.user.username} do báo cáo vi phạm."
             )
             messages.success(request,
@@ -1067,13 +1186,9 @@ def share_post_view(request, post_id): # [cite: 12]
         original_poster_name=original_post.author.get_full_name() or original_post.author.username
     )
     messages.success(request, "Bài viết đã được chia sẻ về trang cá nhân của bạn.")
-    # Nếu dùng AJAX:
-    # serializer = PostSerializer(shared_post, context={'request': request})
-    # return JsonResponse({'post': serializer.data, 'message': 'Post shared successfully'}, status=201)
     return redirect(request.META.get('HTTP_REFERER', 'home'))
 
 
-# Helper function để kiểm tra admin (bạn có thể đã có)
 def is_admin_user(user):
     return user.is_authenticated and (user.role == 'admin' or user.is_superuser)
 
@@ -1083,7 +1198,6 @@ def is_admin_user(user):
 def manage_users_view(request):
     users = CustomUser.objects.all().order_by('username').select_related('profile')
 
-    # Xử lý xóa người dùng nếu có POST request từ form nhập username
     if request.method == 'POST' and 'delete_user_username' in request.POST:
         username_to_delete = request.POST.get('delete_user_username', '').strip()
         if not username_to_delete:
@@ -1099,16 +1213,16 @@ def manage_users_view(request):
                     # thì cần kiểm tra thêm quyền. Để đơn giản, tạm thời cho phép nếu người thực hiện là superuser.
                     if not request.user.is_superuser:
                         messages.error(request, "Chỉ superuser mới có quyền xóa superuser khác.")
-                    else:  # Superuser có thể xóa superuser khác (trừ chính mình)
+                    else:
                         deleted_username = user_to_delete.username
                         user_to_delete.delete()
                         messages.success(request, f"Đã xóa thành công người dùng: {deleted_username}")
-                        return redirect('manage_users')  # Redirect để làm mới danh sách
-                else:  # Người dùng thường hoặc mod
+                        return redirect('manage_users')
+                else:
                     deleted_username = user_to_delete.username
                     user_to_delete.delete()
                     messages.success(request, f"Đã xóa thành công người dùng: {deleted_username}")
-                    return redirect('manage_users')  # Redirect để làm mới danh sách
+                    return redirect('manage_users')
 
             except CustomUser.DoesNotExist:
                 messages.error(request, f"Không tìm thấy người dùng với tên đăng nhập: {username_to_delete}")
@@ -1153,8 +1267,8 @@ def admin_add_user_view(request):
 
 @user_passes_test(is_admin_user)
 @login_required
-@require_POST  # Đảm bảo chỉ POST request mới xóa được
-def admin_delete_user_view(request, username):  # Xóa theo username từ URL
+@require_POST
+def admin_delete_user_view(request, username):
     try:
         user_to_delete = CustomUser.objects.get(username=username)
         if user_to_delete == request.user:
@@ -1196,3 +1310,106 @@ def admin_dashboard_view(request):
         'sub_page_title': 'Dashboard'
     }
     return render(request, 'core/admin_mod/admin_dashboard.html', context)
+
+
+class ReportEventForm(forms.ModelForm):  # Ví dụ
+    description = forms.CharField(widget=forms.Textarea(attrs={'rows': 3}), required=False, label="Lý do khác (nếu có)")
+
+    class Meta:
+        model = Report
+        fields = ['reason', 'description']
+
+
+@login_required
+@require_POST
+def share_event_view(request, event_id):
+    original_event = get_object_or_404(Event, id=event_id)
+
+    if Post.objects.filter(author=request.user, shared_event=original_event).exists():
+        messages.warning(request, "Bạn đã chia sẻ sự kiện này rồi.")
+        return redirect(request.META.get('HTTP_REFERER', 'event_list'))
+
+    try:
+
+        Post.objects.create(
+            author=request.user,
+            shared_event=original_event
+        )
+        messages.success(request, "Sự kiện đã được chia sẻ về trang cá nhân của bạn!")
+    except Exception as e:
+        messages.error(request, f"Không thể chia sẻ sự kiện: {e}")
+        print(f"Error sharing event as post: {e}")
+
+    return redirect(request.META.get('HTTP_REFERER', original_event.get_absolute_url() if hasattr(original_event,
+                                                                                                  'get_absolute_url') else 'event_list'))
+def is_mod_or_admin(user):
+    return user.is_authenticated and (user.role in ['mod', 'admin'] or user.is_superuser)
+@user_passes_test(is_mod_or_admin)
+@login_required
+def edit_event_view(request, event_id):
+    event = get_object_or_404(Event, id=event_id)
+    if event.creator != request.user and not request.user.is_superuser:  # Chỉ người tạo hoặc superuser mới được sửa
+        messages.error(request, "Bạn không có quyền sửa sự kiện này.")
+        return redirect('event_detail', event_id=event.id)
+
+    if request.method == 'POST':
+        form = EventForm(request.POST, request.FILES, instance=event)
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Sự kiện đã được cập nhật.")
+            return redirect('event_detail', event_id=event.id)
+    else:
+        form = EventForm(instance=event)
+
+    return render(request, 'core/events/edit_event_form.html', {'form': form, 'event': event})
+
+
+@user_passes_test(is_mod_or_admin)
+@login_required
+@require_POST
+def delete_event_view(request, event_id):
+    event = get_object_or_404(Event, id=event_id)
+    can_delete = False
+    if event.creator == request.user:
+        can_delete = True
+    elif request.user.is_superuser or request.user.role == 'admin':
+        can_delete = True
+
+    if can_delete:
+        event_title = event.title
+        event.delete()
+        messages.success(request, f"Sự kiện '{event_title}' đã được xóa.")
+        return redirect('event_list')
+    else:
+        messages.error(request, "Bạn không có quyền xóa sự kiện này.")
+        return redirect('event_detail', event_id=event.id)
+
+
+@login_required
+def report_event_view(request, event_id):
+    event_to_report = get_object_or_404(Event, id=event_id)
+    if event_to_report.creator == request.user:
+        messages.error(request, "Bạn không thể báo cáo sự kiện của chính mình.")
+        return redirect('event_detail', event_id=event_to_report.id)
+
+    if request.method == 'POST':
+        form = ReportForm(request.POST)
+        if form.is_valid():
+            report = form.save(commit=False)
+            report.reporter = request.user
+            report.description = f"(Báo cáo cho sự kiện ID: {event_to_report.id} - '{event_to_report.title}')\n{form.cleaned_data.get('description', '')}"
+
+            try:
+                if hasattr(report, 'post'):
+                    report.post = None
+                report.save()
+                messages.success(request, "Báo cáo của bạn về sự kiện đã được gửi.")
+            except Exception as e:
+                messages.error(request,
+                               f"Lỗi khi lưu báo cáo: {e}. Vui lòng cấu hình model Report để hỗ trợ báo cáo sự kiện.")
+
+            return redirect('event_detail', event_id=event_to_report.id)
+    else:
+        form = ReportForm()
+
+    return render(request, 'core/events/report_event_form.html', {'form': form, 'event': event_to_report})

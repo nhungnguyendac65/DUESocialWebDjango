@@ -20,20 +20,19 @@
     .main-content {
         display: flex;
         flex-direction: column;
-        height: calc(100vh - 56px); /* 56px là chiều cao navbar ví dụ */
+        height: calc(100vh - 56px);
     }
-    .content-area { /* Cho phép chat_room_content chiếm toàn bộ không gian còn lại */
+    .content-area {
         flex-grow: 1;
         display: flex;
         flex-direction: column;
-        padding: 0 !important; /* Ghi đè padding của base nếu cần */
+        padding: 0 !important;
     }
 </style>
 {% endblock %}
 
 
 {% block content %}
-    {# Container này sẽ được chat_room_content.html điền vào #}
     <div class="d-flex flex-column h-100">
         {% include "core/messaging/chat_room_content.html" %}
     </div>
@@ -44,19 +43,16 @@
 <script src="{% static 'core/js/messaging_handler.js' %}"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Auto scroll to bottom
     const chatMessagesContainer = document.getElementById('chat-messages-container-{{ group.id }}');
     if (chatMessagesContainer) {
         chatMessagesContainer.scrollTop = chatMessagesContainer.scrollHeight;
     }
 
-    // Lightbox for images
     $(document).on('click', '[data-bs-toggle="lightbox"]', function(event) {
         event.preventDefault();
         $(this).ekkoLightbox();
     });
 
-    // Handle attachment buttons
     const attachFileBtn = document.getElementById('attachFileBtn-{{group.id}}');
     const fileAttachmentInput = document.getElementById('fileAttachmentInput-{{group.id}}');
     const attachImageBtn = document.getElementById('attachImageBtn-{{group.id}}');
@@ -82,13 +78,12 @@ document.addEventListener('DOMContentLoaded', function() {
             previewElement.innerHTML = '';
         }
     }
-    window.clearFileInput = function(inputId) { // Make it global for the inline onclick
-        document.getElementById(inputId).value = ''; // Clear the file input
-        // Optionally, manually trigger dismiss if not happening automatically
+    window.clearFileInput = function(inputId) {
+        document.getElementById(inputId).value = '';
         const alertElement = document.querySelector(`#attachmentPreview-{{group.id}} .alert`);
         if (alertElement) {
             var bsAlert = new bootstrap.Alert(alertElement);
-            // bsAlert.close(); // This might not work as expected for dynamic content
+            // bsAlert.close();
             alertElement.remove();
         }
     }
@@ -98,7 +93,6 @@ document.addEventListener('DOMContentLoaded', function() {
     if(imageAttachmentInput) imageAttachmentInput.addEventListener('change', () => displayPreview(imageAttachmentInput, attachmentPreview));
 
 
-    // Xử lý AJAX cho block user (nếu cần cập nhật UI động)
     document.querySelectorAll('.block-user-btn').forEach(button => {
         button.addEventListener('click', function() {
             const userIdToBlock = this.dataset.userId;
@@ -118,9 +112,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     alert(data.message);
                     if (data.blocked_status !== undefined) {
                         this.textContent = data.blocked_status ? 'Bỏ chặn người này' : 'Chặn người này';
-                        // Nếu chặn thành công và đang ở chat room, có thể redirect hoặc disable input
                         if (data.blocked_status) {
-                            // Disable form gửi tin nhắn hoặc thông báo
                             const messageForm = document.getElementById('message-form-' + groupId);
                             if(messageForm) {
                                 messageForm.querySelector('input[name="content"]').disabled = true;
@@ -130,7 +122,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                 blockedInfo.textContent = 'Bạn đã chặn người này. Bỏ chặn để tiếp tục nhắn tin.';
                                 messageForm.insertAdjacentElement('afterend', blockedInfo);
                             }
-                        } else { // Bỏ chặn
+                        } else {
                              const messageForm = document.getElementById('message-form-' + groupId);
                              if(messageForm) {
                                 messageForm.querySelector('input[name="content"]').disabled = false;

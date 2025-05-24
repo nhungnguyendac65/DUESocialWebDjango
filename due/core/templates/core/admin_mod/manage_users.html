@@ -1,10 +1,10 @@
-{% extends "core/base.html" %} {# Kế thừa từ base.html #}
+{% extends "core/base.html" %}
 {% load static %}
 {% load humanize %}
 
 {% block title %}Quản lý Người dùng - Admin{% endblock %}
 
-{% block extra_head %} {# Thêm CSS riêng cho trang này nếu cần #}
+{% block extra_head %}
 <style>
     .manage-users-wrapper {
         background-color: #f8f9fa;
@@ -144,6 +144,7 @@
         </div>
     </div>
 </div>
+
 <script>
 function confirmDelete() {
     const usernameInput = document.getElementById('delete_user_username_input');

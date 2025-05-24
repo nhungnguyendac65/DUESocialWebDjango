@@ -14,7 +14,6 @@
               {% if edit_post_form %}
                   {{ edit_post_form|crispy }}
               {% else %}
-                  {# Fallback nếu edit_post_form không được truyền đúng, tuy nhiên nên đảm bảo view truyền đúng #}
                   <div class="mb-3">
                       <label for="title-edit-modal-{{post.id}}" class="form-label">Tiêu đề</label>
                       <input type="text" class="form-control" id="title-edit-modal-{{post.id}}" name="title" value="{{ post.title }}" required maxlength="300">

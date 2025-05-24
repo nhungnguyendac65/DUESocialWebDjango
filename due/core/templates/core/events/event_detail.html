@@ -125,14 +125,10 @@
     {{ block.super }}
     <script src="{% static 'core/js/event_interactions.js' %}"></script>
     <script>
-        // Kích hoạt Lightbox cho ảnh (nếu bạn có dùng trong event_interactions.js)
-        // Hiện tại không có data-bs-toggle="lightbox" trong HTML này, nhưng để lại nếu bạn thêm sau
         document.addEventListener('click', function (e) {
             if (e.target.closest('[data-bs-toggle="lightbox"]')) {
                 e.preventDefault();
-                // Cần thư viện lightbox riêng hoặc logic modal của Bootstrap
-                // const lightbox = new bootstrap.Modal(e.target.closest('[data-bs-toggle="lightbox"]').dataset.bsTarget);
-                // lightbox.show();
+                e.preventDefault();
             }
         });
     </script>

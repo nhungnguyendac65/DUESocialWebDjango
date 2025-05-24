@@ -1,30 +1,23 @@
 document.addEventListener('DOMContentLoaded', function() {
-    const csrftoken = getCookie('csrftoken'); // Đảm bảo hàm getCookie đã tồn tại
+    const csrftoken = getCookie('csrftoken');
 
     const chatMessagesContainer = document.querySelector('[id^="chat-messages-container-"]');
     const currentGroupId = chatMessagesContainer ? chatMessagesContainer.id.split('-').pop() : null;
 
-    // 1. Tự động cuộn xuống tin nhắn mới nhất
     function scrollToBottom(container) {
         if (container) {
-            container.scrollTop = container.scrollHeight; // Cuộn xuống dưới cùng
+            container.scrollTop = container.scrollHeight;
         }
     }
 
     if (chatMessagesContainer) {
-        // Cuộn xuống dưới cùng khi trang được tải lần đầu
         scrollToBottom(chatMessagesContainer);
-
-        // Sử dụng MutationObserver để tự động cuộn khi có tin nhắn mới được thêm vào (cho AJAX)
         const observer = new MutationObserver(mutations => {
-            // Có thể thêm logic kiểm tra xem người dùng có đang tự cuộn lên không
-            // Hiện tại, nó sẽ luôn cuộn khi có tin nhắn mới
             scrollToBottom(chatMessagesContainer);
         });
         observer.observe(chatMessagesContainer, { childList: true });
     }
 
-    // 2. Gửi tin nhắn bằng AJAX
     if (currentGroupId) {
         const messageForm = document.getElementById(`message-form-${currentGroupId}`);
         const messageTextarea = document.getElementById(`messageTextarea-${currentGroupId}`);
@@ -89,17 +82,13 @@ document.addEventListener('DOMContentLoaded', function() {
                                 <img src="${data.sender_avatar_url}" alt="${data.sender_username}" class="rounded-circle" width="30" height="30" style="object-fit: cover;">
                             </a>
                         `;
-
-                        // SỬA Ở ĐÂY: Thay insertBefore bằng appendChild
                         if(messagesContainer) {
-                            messagesContainer.appendChild(messageDiv); // Thêm vào cuối danh sách
-                            // scrollToBottom(messagesContainer); // MutationObserver sẽ tự động gọi scrollToBottom
+                            messagesContainer.appendChild(messageDiv);
                         }
 
                         this.reset();
                         if (attachmentPreviewContainer) attachmentPreviewContainer.innerHTML = '';
                         if (messageTextarea) messageTextarea.style.height = 'auto';
-                        // scrollToBottom đã được gọi bởi MutationObserver, không cần gọi lại ở đây trừ khi có vấn đề
                     } else {
                         console.error('Lỗi khi gửi tin nhắn:', data.errors || data);
                         alert('Lỗi: ' + (data.errors ? JSON.stringify(data.errors) : 'Không thể gửi tin nhắn.'));
@@ -125,8 +114,6 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
     }
-
-    // ... (phần code xử lý đính kèm file và chặn người dùng giữ nguyên) ...
     // 3. Xử lý nút đính kèm file và ảnh + preview (giữ nguyên)
     if (currentGroupId) {
         const attachFileBtn = document.getElementById(`attachFileBtn-${currentGroupId}`);
@@ -223,8 +210,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-}); // Kết thúc DOMContentLoaded
-
+});
 
 function getCookie(name) {
     let cookieValue = null;

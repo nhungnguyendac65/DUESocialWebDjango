@@ -1,17 +1,12 @@
-/* ----------------------------------------------------------------
-    Core Styles - DUE Network
------------------------------------------------------------------*/
-
-/* -------------------- GENERAL STYLES & UTILITIES -------------------- */
 body {
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
-    background-color: #f4f6f9; /* Nền chung nhẹ nhàng cho body */
+    background-color: #f4f6f9;
     color: #333;
     line-height: 1.6;
 }
 
 a {
-    color: #0d6efd; /* Màu link chính của Bootstrap */
+    color: #0d6efd;
     text-decoration: none;
 }
 
@@ -48,11 +43,10 @@ a:hover {
 }
 
 /* -------------------- AUTH PAGES (Login, Register, Password Reset) -------------------- */
-/* Kết hợp từ auth_style.css đã tạo trước đó */
-.auth-main-content-wrapper { /* Class bọc ngoài cho các trang auth nếu kế thừa base.html */
+.auth-main-content-wrapper
     background-color: #eef2f7;
     padding: 2rem 0;
-    min-height: calc(100vh - 56px); /* Giả sử navbar cao 56px */
+    min-height: calc(100vh - 56px);
     display: flex;
     align-items: center;
 }
@@ -70,14 +64,14 @@ a:hover {
 
 .auth-card {
     width: 100%;
-    max-width: 480px; /* Cho login, password reset */
+    max-width: 480px;
     padding: 30px 40px;
     background-color: #ffffff;
     display: flex;
     flex-direction: column;
     justify-content: center;
 }
-.auth-card.register-card { /* Có thể cần rộng hơn cho register */
+.auth-card.register-card {
     max-width: 520px;
 }
 
@@ -95,7 +89,7 @@ a:hover {
     border-bottom-right-radius: 0.75rem;
 }
 .auth-background-text h1 {
-    font-size: 3rem; /* Điều chỉnh lại một chút */
+    font-size: 3rem;
     font-weight: bold;
     color: #0056b3;
     text-transform: uppercase;
@@ -106,7 +100,7 @@ a:hover {
     font-size: 1.1rem;
     color: #555;
 }
-.auth-background-text img { /* Cho ảnh illustration */
+.auth-background-text img {
     max-width: 70%;
     margin-top: 20px;
 }
@@ -126,12 +120,12 @@ a:hover {
     border-bottom-left-radius: 0;
 }
 
-@media (max-width: 991.98px) { /* Dưới lg */
+@media (max-width: 991.98px) {
     .auth-background-text {
         display: none;
     }
     .auth-card, .auth-card.register-card {
-        max-width: 500px; /* Cho form chiếm nhiều hơn trên tablet */
+        max-width: 500px;
         margin: 1rem auto;
     }
     .auth-container {
@@ -146,56 +140,56 @@ a:hover {
 
 
 /* -------------------- MAIN LAYOUT (Toolbar, Navbar, Content Area) -------------------- */
-#wrapper { /* Nếu bạn dùng id="wrapper" cho div.d-flex ngoài cùng trong base.html */
-    /* min-height: 100vh; */ /* Để đảm bảo toolbar và content luôn full height */
+#wrapper {
+
 }
 
 .toolbar { /* _toolbar.html */
     width: 80px;
     height: 100vh;
-    position: fixed; /* Hoặc sticky, tùy layout bạn muốn */
+    position: fixed;
     top: 0;
     left: 0;
-    z-index: 1031; /* Cao hơn navbar */
-    background-color: #fff; /* Hoặc màu bạn muốn */
+    z-index: 1031;
+    background-color: #fff;
     border-right: 1px solid #e9ecef;
-    padding-top: 1rem; /* Khoảng cách cho logo toolbar */
+    padding-top: 1rem;
 }
 .toolbar .nav-link {
-    color: #6c757d; /* Màu icon xám */
+    color: #6c757d;
 }
 .toolbar .nav-link:hover,
 .toolbar .nav-link.active {
-    color: #0d6efd; /* Màu primary khi active hoặc hover */
-    background-color: rgba(13, 110, 253, 0.1); /* Nền nhẹ khi active/hover */
+    color: #0d6efd;
+    background-color: rgba(13, 110, 253, 0.1);
 }
 .toolbar .nav-link i {
-    font-size: 1.25rem; /* Kích thước icon */
+    font-size: 1.25rem;
 }
 
 
-.main-content { /* #page-content-wrapper trong base.html */
-    margin-left: 80px; /* Bằng chiều rộng của toolbar */
-    width: calc(100% - 80px); /* Chiếm phần còn lại */
-    background-color: #f4f6f9; /* Nền cho khu vực nội dung chính */
+.main-content {
+    margin-left: 80px;
+    width: calc(100% - 80px);
+    background-color: #f4f6f9;
 }
-.navbar-main-app { /* class cho nav trong _navbar.html nếu cần style riêng */
+.navbar-main-app {
     box-shadow: 0 2px 4px rgba(0,0,0,.08);
 }
-.navbar-logo-main { /* class cho logo trên navbar _navbar.html */
-    height: 35px; /* Tăng kích thước logo một chút */
+.navbar-logo-main {
+    height: 35px;
 }
 
-.content-area { /* class cho main.container-fluid trong base.html */
-    padding-top: 1rem !important; /* Đảm bảo có khoảng cách với navbar */
+.content-area {
+    padding-top: 1rem !important;
 }
 
-@media (max-width: 767.98px) { /* Dưới md */
+@media (max-width: 767.98px) {
     .toolbar {
         width: 100%;
         height: auto;
-        position: fixed; /* Hoặc relative tùy bạn muốn toolbar mobile thế nào */
-        bottom: 0; /* Ví dụ: toolbar ở dưới cùng trên mobile */
+        position: fixed;
+        bottom: 0;
         left: 0;
         z-index: 1030;
         border-top: 1px solid #e9ecef;
@@ -203,19 +197,19 @@ a:hover {
         padding-top: 0;
     }
     .toolbar .nav {
-        flex-direction: row !important; /* Các item nằm ngang */
-        justify-content: space-around; /* Phân bố đều */
+        flex-direction: row !important;
+        justify-content: space-around;
     }
     .toolbar .nav-item {
-        flex-grow: 1; /* Các item chiếm không gian bằng nhau */
+        flex-grow: 1;
     }
     .toolbar .nav-link {
-        padding: 0.75rem 0.5rem !important; /* Điều chỉnh padding cho mobile */
+        padding: 0.75rem 0.5rem !important;
     }
     .main-content {
         margin-left: 0;
         width: 100%;
-        padding-bottom: 60px; /* Khoảng trống cho toolbar ở dưới nếu position:fixed */
+        padding-bottom: 60px;
     }
 }
 
@@ -234,7 +228,7 @@ a:hover {
 .post-card .card-footer .btn-link i {
     margin-right: 0.3rem;
 }
-.post-card .shared-post-frame { /* Khung cho bài viết được chia sẻ */
+.post-card .shared-post-frame {
     border: 1px solid #e0e0e0;
     border-left: 3px solid #0d6efd;
     padding: 0.75rem;
@@ -248,7 +242,7 @@ a:hover {
 #createPostModal .modal-body .form-label {
     font-weight: 500;
 }
-#createPostModal .btn-light.border { /* Cho nút đính ảnh/file */
+#createPostModal .btn-light.border {
     color: #555;
 }
 #createPostModal .btn-light.border:hover {
@@ -266,13 +260,13 @@ a:hover {
 .event-card .card-footer .btn-link {
     text-decoration: none;
 }
-.create-event-page-wrapper .create-event-card { /* create_event_form.html */
+.create-event-page-wrapper .create-event-card {
     background-color: #ffffff;
     padding: 2rem;
     border-radius: 0.5rem;
     box-shadow: 0 0.5rem 1rem rgba(0,0,0,.15);
 }
-.tags-checkbox-list { /* Cho danh sách tag trong form tạo sự kiện nếu render thủ công */
+.tags-checkbox-list {
     max-height: 200px;
     overflow-y: auto;
     border: 1px solid #ced4da;
@@ -350,17 +344,16 @@ a:hover {
 }
 .message-bubble {
     max-width: 70%;
-    word-wrap: break-word; /* Để không bị tràn text dài */
+    word-wrap: break-word;
 }
 .message-bubble p {
-    margin-bottom: 0.25rem !important; /* Ghi đè margin của p nếu có */
+    margin-bottom: 0.25rem !important;
 }
 .message-timestamp {
     font-size: 0.75em;
 }
 .chat-messages {
     overflow-y: auto;
-     /* Quan trọng: Tin nhắn mới nhất sẽ ở dưới cùng */
 }
 
 
@@ -372,22 +365,18 @@ a:hover {
     padding: 1.5rem;
     min-height: calc(100vh - 56px);
 }
-.info-box { /* admin_dashboard.html */
-    /* ... style đã có ... */
+.info-box {
 }
-.report-card { /* reported_posts.html */
+.report-card {
     border-left: 5px solid #dc3545;
 }
 .report-card .card-header {
     background-color: rgba(220, 53, 69, 0.1);
 }
 .user-select-item { /* add_mod.html */
-    /* ... style đã có ... */
 }
 
-/* Các thành phần input của crispy form (nếu bạn không tùy chỉnh widget nhiều) */
 .form-control, .form-select {
-    /* font-size: 0.9rem; */ /* Có thể điều chỉnh font chữ input */
 }
 
-/* Bạn có thể thêm các style cụ thể hơn cho từng trang ở đây */
+
